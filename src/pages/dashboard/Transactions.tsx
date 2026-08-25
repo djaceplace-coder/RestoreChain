@@ -34,7 +34,7 @@ export default function Transactions() {
 
     fetchTxs();
 
-    const channel = supabase.channel('tx_changes')
+    const channel = supabase.channel('tx_changes-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` }, fetchTxs)
       .subscribe();
 

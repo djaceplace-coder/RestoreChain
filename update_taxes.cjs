@@ -1,4 +1,6 @@
+const fs = require('fs');
 
+const taxesCode = `
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, Clock, CheckCircle, AlertCircle, Loader2, Plus } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -61,7 +63,7 @@ export default function Taxes() {
     });
     
     if (error) {
-      setStatusMsg(`Error: ${error.message}`);
+      setStatusMsg(\`Error: \${error.message}\`);
     } else {
       setStatusMsg('Tax report successfully lodged for admin review.');
       setTimeout(() => setIsLodging(false), 3000);
@@ -102,7 +104,7 @@ export default function Taxes() {
             </div>
             
             {statusMsg && (
-              <div className={`p-3 text-sm font-bold rounded-xl ${statusMsg.includes('success') ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>
+              <div className={\`p-3 text-sm font-bold rounded-xl \${statusMsg.includes('success') ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}\`}>
                 {statusMsg}
               </div>
             )}
@@ -133,7 +135,7 @@ export default function Taxes() {
                 <tr key={report.id} className="hover:bg-gray-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${report.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                      <div className={\`p-2 rounded-lg \${report.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-500'}\`}>
                         <FileText size={20} />
                       </div>
                       <div>
@@ -159,7 +161,7 @@ export default function Taxes() {
                     <button 
                       onClick={() => downloadReport(report)}
                       disabled={report.status !== 'completed'}
-                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${report.status === 'completed' ? 'bg-brand-dark text-white hover:bg-black' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                      className={\`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors \${report.status === 'completed' ? 'bg-brand-dark text-white hover:bg-black' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}\`}
                     >
                       <Download size={16} /> Download PDF
                     </button>
@@ -180,3 +182,5 @@ export default function Taxes() {
     </div>
   );
 }
+`;
+fs.writeFileSync('src/pages/dashboard/Taxes.tsx', taxesCode);

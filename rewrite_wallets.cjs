@@ -1,4 +1,6 @@
-
+const fs = require('fs');
+const walletsPath = 'src/pages/dashboard/Wallets.tsx';
+const walletsCode = `
 import React, { useState, useEffect } from 'react';
 import { Plus, RefreshCw, AlertCircle, Link2, ExternalLink, Loader2, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -60,7 +62,7 @@ export default function Wallets() {
     });
     
     if (error) {
-      setSubmitStatus(`Error: ${error.message}`);
+      setSubmitStatus(\`Error: \${error.message}\`);
     } else {
       setSubmitStatus('Wallet submitted successfully! Waiting for admin approval.');
       setNewAddress('');
@@ -110,7 +112,7 @@ export default function Wallets() {
             </div>
             
             {submitStatus && (
-              <div className={`p-3 text-sm font-bold rounded-xl ${submitStatus.includes('success') ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>
+              <div className={\`p-3 text-sm font-bold rounded-xl \${submitStatus.includes('success') ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}\`}>
                 {submitStatus}
               </div>
             )}
@@ -128,9 +130,9 @@ export default function Wallets() {
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {wallets.map(wallet => (
-            <div key={wallet.id} className={`bg-white p-5 rounded-2xl border ${wallet.status === 'pending' ? 'border-orange-200 bg-orange-50/30' : 'border-gray-200'} shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors`}>
+            <div key={wallet.id} className={\`bg-white p-5 rounded-2xl border \${wallet.status === 'pending' ? 'border-orange-200 bg-orange-50/30' : 'border-gray-200'} shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors\`}>
               <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold shrink-0 ${wallet.status === 'pending' ? 'bg-orange-100 text-orange-500' : 'bg-gray-100 text-gray-500'}`}>
+                <div className={\`w-12 h-12 rounded-xl flex items-center justify-center font-bold shrink-0 \${wallet.status === 'pending' ? 'bg-orange-100 text-orange-500' : 'bg-gray-100 text-gray-500'}\`}>
                   {wallet.network.charAt(0)}
                 </div>
                 <div>
@@ -153,7 +155,7 @@ export default function Wallets() {
               
               <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-1/2">
                 <div className="text-right">
-                  <p className="font-bold text-brand-dark">${Number(wallet.balance).toLocaleString()}</p>
+                  <p className="font-bold text-brand-dark">\${Number(wallet.balance).toLocaleString()}</p>
                   {wallet.status === 'pending' ? (
                     <p className="text-xs text-orange-500 font-bold flex items-center justify-end gap-1">
                       <Clock size={12} /> Awaiting Sync
@@ -178,3 +180,5 @@ export default function Wallets() {
     </div>
   );
 }
+`;
+fs.writeFileSync(walletsPath, walletsCode);

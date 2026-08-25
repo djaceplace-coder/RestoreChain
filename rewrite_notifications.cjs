@@ -1,4 +1,6 @@
+const fs = require('fs');
 
+const code = `
 import React, { useState, useEffect } from 'react';
 import { Bell, Check, ShieldAlert, FileText, ArrowRightLeft, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -78,19 +80,19 @@ export default function Notifications() {
             notifications.map(notif => (
               <div 
                 key={notif.id} 
-                className={`transition-colors ${notif.read ? 'bg-white' : 'bg-brand-purple/5'}`}
+                className={\`transition-colors \${notif.read ? 'bg-white' : 'bg-brand-purple/5'}\`}
               >
                 <div 
                   className="p-6 flex gap-4 cursor-pointer hover:bg-gray-50"
                   onClick={() => toggleExpand(notif.id, notif.read)}
                 >
-                  <div className={`p-3 rounded-xl shrink-0 h-fit ${notif.read ? 'bg-gray-100 text-gray-400' : 'bg-brand-purple/10 text-brand-purple'}`}>
+                  <div className={\`p-3 rounded-xl shrink-0 h-fit \${notif.read ? 'bg-gray-100 text-gray-400' : 'bg-brand-purple/10 text-brand-purple'}\`}>
                     <Info size={20} />
                   </div>
                   
                   <div className="flex-1">
                     <div className="flex justify-between items-start mb-1">
-                      <h3 className={`font-bold ${notif.read ? 'text-gray-700' : 'text-brand-dark'}`}>{notif.title}</h3>
+                      <h3 className={\`font-bold \${notif.read ? 'text-gray-700' : 'text-brand-dark'}\`}>{notif.title}</h3>
                       <div className="flex items-center gap-4">
                         <span className="text-xs font-bold text-gray-400">
                           {new Date(notif.created_at).toLocaleDateString()}
@@ -123,3 +125,5 @@ export default function Notifications() {
     </div>
   );
 }
+`;
+fs.writeFileSync('src/pages/dashboard/Notifications.tsx', code);

@@ -25,7 +25,7 @@ export default function Reconciliation() {
 
     fetchIssues();
 
-    const channel = supabase.channel('user_recon_changes')
+    const channel = supabase.channel('user_recon_changes-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reconciliation_issues' }, fetchIssues)
       .subscribe();
 

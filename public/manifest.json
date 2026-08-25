@@ -1,18 +1,12 @@
 {
   "name": "RestoreChain",
   "short_name": "RestoreChain",
-  "description": "Digital Asset Recovery & Forensics",
-  "start_url": "/dashboard",
+  "description": "Secure crypto portfolio tracking and reconciliation.",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#0A0A0F",
-  "theme_color": "#0A0A0F",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
   "icons": [
-    {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
     {
       "src": "/icon.svg",
       "sizes": "192x192",

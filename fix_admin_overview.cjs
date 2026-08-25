@@ -1,4 +1,6 @@
+const fs = require('fs');
 
+const code = `
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Users, ShieldAlert, CheckCircle, Clock, Search, ArrowRight } from 'lucide-react';
@@ -56,7 +58,7 @@ export default function AdminOverview() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {dynamicStats.map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <div className={`w-10 h-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4`}>
+            <div className={\`w-10 h-10 rounded-xl \${stat.bg} \${stat.color} flex items-center justify-center mb-4\`}>
               <stat.icon size={20} />
             </div>
             <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">{stat.label}</p>
@@ -115,3 +117,5 @@ export default function AdminOverview() {
     </div>
   );
 }
+`;
+fs.writeFileSync('src/pages/admin/AdminOverview.tsx', code);

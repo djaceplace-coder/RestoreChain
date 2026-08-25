@@ -11,7 +11,7 @@ export default function AdminUsers() {
 
   useEffect(() => {
     fetchUsers();
-    const channel = supabase.channel('profiles_changes')
+    const channel = supabase.channel('profiles_changes-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
         fetchUsers();
       })

@@ -14,6 +14,9 @@ export default function AdminUserDetail() {
   const [wallets, setWallets] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [taxReports, setTaxReports] = useState<any[]>([]);
+  const [defiPositions, setDefiPositions] = useState<any[]>([]);
+  const [nfts, setNfts] = useState<any[]>([]);
 
   // System Update Form State
   const [usdAmount, setUsdAmount] = useState('');
@@ -39,12 +42,13 @@ export default function AdminUserDetail() {
   useEffect(() => {
     fetchUserAndData();
     
-    const channel = supabase.channel('admin_user_detail_changes')
+    const channel = supabase.channel('admin_user_detail_changes-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${id}` }, fetchUserAndData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reconciliation_issues', filter: `user_id=eq.${id}` }, fetchUserAndData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${id}` }, fetchUserAndData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${id}` }, fetchUserAndData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${id}` }, fetchUserAndData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tax_reports', filter: `user_id=eq.${id}` }, fetchUserAndData)
       .subscribe();
       
     return () => { supabase.removeChannel(channel); };
@@ -66,6 +70,13 @@ export default function AdminUserDetail() {
     const { data: notifData } = await supabase.from('notifications').select('*').eq('user_id', id).order('created_at', { ascending: false });
     if (notifData) setNotifications(notifData);
 
+    const { data: taxData } = await supabase.from('tax_reports').select('*').eq('user_id', id).order('created_at', { ascending: false });
+    const { data: defiData } = await supabase.from('defi_positions').select('*').eq('user_id', id).order('created_at', { ascending: false });
+    if (defiData) setDefiPositions(defiData);
+    const { data: nftData } = await supabase.from('nfts').select('*').eq('user_id', id).order('created_at', { ascending: false });
+    if (nftData) setNfts(nftData);
+    if (taxData) setTaxReports(taxData);
+
     setLoading(false);
   };
 
@@ -77,7 +88,8 @@ export default function AdminUserDetail() {
       usd_amount: Number(usdAmount),
       asset_name: assetName,
       message_title: messageTitle,
-      message_body: messageBody
+      message_body: messageBody,
+      tx_date: txDate
     });
     
     if (error) setUpdateStatus(`Error: ${error.message}`);
@@ -110,6 +122,14 @@ export default function AdminUserDetail() {
     await supabase.from('reconciliation_issues').update({ status: 'resolved' }).eq('id', issueId);
   };
 
+  const approveWallet = async (walletId: string) => {
+    await supabase.from('wallets').update({ status: 'active' }).eq('id', walletId);
+  };
+
+  const completeTaxReport = async (reportId: string) => {
+    await supabase.from('tax_reports').update({ status: 'completed' }).eq('id', reportId);
+  };
+
   const pushWallet = async (e: React.FormEvent) => {
     e.preventDefault();
     setWalletStatusMsg('Adding...');
@@ -129,6 +149,15 @@ export default function AdminUserDetail() {
     }
   };
 
+  const approveDefi = async (posId: string) => {
+    await supabase.from('defi_positions').update({ status: 'active' }).eq('id', posId);
+    setDefiPositions(defiPositions.map(d => d.id === posId ? { ...d, status: 'active' } : d));
+  };
+  const approveNft = async (nftId: string) => {
+    await supabase.from('nfts').update({ status: 'active' }).eq('id', nftId);
+    setNfts(nfts.map(n => n.id === nftId ? { ...n, status: 'active' } : n));
+  };
+  
   const pushNotification = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
@@ -186,6 +215,7 @@ export default function AdminUserDetail() {
           { id: 'system', label: 'System Update', icon: Wallet, alert: true },
           { id: 'reconciliation', label: 'Reconciliation', icon: Activity, badge: reconIssues.filter(r=>r.status==='open').length },
           { id: 'wallets', label: 'Wallets', icon: Wallet },
+          { id: 'taxes', label: 'Tax Reports', icon: Receipt, badge: taxReports.filter(t=>t.status==='pending').length },
           { id: 'transactions', label: 'Transactions', icon: History },
           { id: 'notifications', label: 'Push Notifications', icon: MessageSquare },
         ].map(tab => (
@@ -219,6 +249,14 @@ export default function AdminUserDetail() {
                   <label className="block text-sm font-bold text-gray-700 mb-1">Amount (USD)</label>
                   <input type="number" step="0.01" required value={usdAmount} onChange={e => setUsdAmount(e.target.value)} className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-red-500" placeholder="10000.00" />
                 </div>
+                <div>
+                  </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
+                  <input type="date" required value={txDate} onChange={e => setTxDate(e.target.value)} className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-red-500" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Asset Name</label>
                   <input type="text" required value={assetName} onChange={e => setAssetName(e.target.value)} className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-red-500" placeholder="USD / BTC / ETH" />
@@ -361,10 +399,21 @@ export default function AdminUserDetail() {
                 {wallets.map(w => (
                   <div key={w.id} className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm flex items-center justify-between">
                     <div>
-                      <p className="font-bold text-brand-dark">{w.label}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-brand-dark">{w.label}</p>
+                        {w.status === 'pending' && <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded">PENDING</span>}
+                        {w.status === 'active' && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded">ACTIVE</span>}
+                      </div>
                       <p className="text-xs text-gray-500 font-mono mt-1">{w.address.substring(0,8)}...{w.address.substring(w.address.length-6)}</p>
                     </div>
-                    <span className="text-xs font-bold px-2.5 py-1 bg-gray-100 rounded-full">{w.network}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold px-2.5 py-1 bg-gray-100 rounded-full">{w.network}</span>
+                      {w.status === 'pending' && (
+                        <button onClick={() => approveWallet(w.id)} className="px-3 py-1 bg-green-50 text-green-600 hover:bg-green-100 text-xs font-bold rounded-lg transition-colors">
+                          Approve
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
                 {wallets.length === 0 && <p className="text-sm text-gray-500">No wallets connected.</p>}
@@ -408,6 +457,36 @@ export default function AdminUserDetail() {
           </div>
         )}
 
+        {/* TAB: TAX REPORTS */}
+        {activeTab === 'taxes' && (
+          <div className="animate-fade-in max-w-2xl">
+            <h2 className="text-xl font-bold text-brand-dark mb-6">Manage User Tax Reports</h2>
+            <div className="space-y-3">
+              {taxReports.map(t => (
+                <div key={t.id} className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-brand-dark">Tax Year {t.tax_year}</p>
+                    <p className="text-xs text-gray-500 mt-1">Requested: {new Date(t.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {t.status === 'pending' ? (
+                      <>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-700">PENDING</span>
+                        <button onClick={() => completeTaxReport(t.id)} className="px-4 py-2 bg-brand-dark text-white text-xs font-bold rounded-lg hover:bg-black transition-colors">
+                          Mark as Completed
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-green-100 text-green-700 flex items-center gap-1"><CheckCircle size={12}/> COMPLETED</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {taxReports.length === 0 && <p className="text-sm text-gray-500">No tax reports requested by this user.</p>}
+            </div>
+          </div>
+        )}
+
         {/* TAB: NOTIFICATIONS */}
         {activeTab === 'notifications' && (
           <div className="animate-fade-in max-w-2xl">
@@ -440,6 +519,71 @@ export default function AdminUserDetail() {
                 </div>
               ))}
               {notifications.length === 0 && <p className="text-sm text-gray-500">No notifications sent.</p>}
+            </div>
+          </div>
+        )}
+        {/* TAB: DEFI */}
+        {activeTab === 'defi' && (
+          <div className="animate-fade-in max-w-4xl">
+            <h2 className="text-xl font-bold text-brand-dark mb-6">DeFi Positions</h2>
+            <div className="space-y-3">
+              {defiPositions.map(d => (
+                <div key={d.id} className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-brand-dark">{d.protocol}</p>
+                      {d.status === 'pending' && <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded">PENDING</span>}
+                      {d.status === 'active' && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded">ACTIVE</span>}
+                    </div>
+                    <p className="text-xs text-gray-500 font-mono mt-1">{d.type} - {d.asset}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="font-bold text-brand-dark">${d.balance}</p>
+                      <p className="text-xs text-gray-400 font-bold">{d.apy}% APY</p>
+                    </div>
+                    {d.status === 'pending' && (
+                      <button onClick={() => approveDefi(d.id)} className="px-3 py-1 bg-green-50 text-green-600 hover:bg-green-100 text-xs font-bold rounded-lg transition-colors">
+                        Approve
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {defiPositions.length === 0 && <p className="text-sm text-gray-500">No DeFi positions requested.</p>}
+            </div>
+          </div>
+        )}
+        
+        {/* TAB: NFTS */}
+        {activeTab === 'nfts' && (
+          <div className="animate-fade-in max-w-4xl">
+            <h2 className="text-xl font-bold text-brand-dark mb-6">NFT Collection</h2>
+            <div className="space-y-3">
+              {nfts.map(n => (
+                <div key={n.id} className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-brand-dark">{n.name}</p>
+                      {n.status === 'pending' && <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded">PENDING</span>}
+                      {n.status === 'active' && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded">ACTIVE</span>}
+                    </div>
+                    <p className="text-xs text-gray-500 font-mono mt-1">{n.collection}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">Floor</p>
+                      <p className="font-bold text-brand-dark">${n.floor_price}</p>
+                    </div>
+                    {n.status === 'pending' && (
+                      <button onClick={() => approveNft(n.id)} className="px-3 py-1 bg-green-50 text-green-600 hover:bg-green-100 text-xs font-bold rounded-lg transition-colors">
+                        Approve
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {nfts.length === 0 && <p className="text-sm text-gray-500">No NFTs requested.</p>}
             </div>
           </div>
         )}

@@ -1,4 +1,6 @@
+const fs = require('fs');
 
+const code = `
 import React, { useState, useEffect } from 'react';
 import { Layers, Droplet, Search, Activity, Plus, X, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -89,7 +91,7 @@ export default function DeFi() {
             <h3 className="font-bold text-brand-dark">Total Locked Value</h3>
           </div>
           <p className="text-3xl font-display font-bold text-brand-dark">
-            ${totalLocked.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            \${totalLocked.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
@@ -105,7 +107,7 @@ export default function DeFi() {
             <h3 className="font-bold text-brand-dark">Pending Yield</h3>
           </div>
           <p className="text-3xl font-display font-bold text-brand-dark">
-            ${(totalLocked * (avgApy / 100) / 12).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            \${(totalLocked * (avgApy / 100) / 12).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
       </div>
@@ -164,7 +166,7 @@ export default function DeFi() {
                     </td>
                     <td className="px-6 py-4 font-bold text-brand-dark">{pos.asset}</td>
                     <td className="px-6 py-4 text-right font-bold text-brand-dark">
-                      ${Number(pos.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      \${Number(pos.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="px-6 py-4 text-right text-green-600 font-bold">{pos.apy}%</td>
                     <td className="px-6 py-4 text-right">
@@ -243,3 +245,5 @@ export default function DeFi() {
     </div>
   );
 }
+`;
+fs.writeFileSync('src/pages/dashboard/DeFi.tsx', code);

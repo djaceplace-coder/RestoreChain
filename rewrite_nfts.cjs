@@ -1,4 +1,6 @@
+const fs = require('fs');
 
+const code = `
 import React, { useState, useEffect } from 'react';
 import { Image as ImageIcon, ExternalLink, Plus, X, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -109,7 +111,7 @@ export default function NFTs() {
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                   <div>
                     <p className="text-[10px] text-gray-400 font-bold uppercase">Floor Price</p>
-                    <p className="font-bold text-brand-dark">${Number(nft.floor_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="font-bold text-brand-dark">\${Number(nft.floor_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                 </div>
               </div>
@@ -159,3 +161,5 @@ export default function NFTs() {
     </div>
   );
 }
+`;
+fs.writeFileSync('src/pages/dashboard/NFTs.tsx', code);

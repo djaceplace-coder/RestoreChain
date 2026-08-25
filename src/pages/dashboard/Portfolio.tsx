@@ -50,7 +50,7 @@ export default function Portfolio() {
 
     fetchData();
 
-    const channel = supabase.channel('portfolio_changes')
+    const channel = supabase.channel('portfolio_changes-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assets', filter: `user_id=eq.${user.id}` }, fetchData)
       .subscribe();

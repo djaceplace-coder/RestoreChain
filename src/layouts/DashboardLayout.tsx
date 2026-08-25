@@ -34,10 +34,18 @@ export default function DashboardLayout() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const checkAdmin = async () => {
+    let reconChannel: any;
+
+    const checkAdminAndRecon = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setCurrentUser(user);
+        
+        const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (data?.role === 'admin') {
+          setIsAdmin(true);
+        }
+
         // Fetch recon count
         const fetchRecon = async () => {
           const { count } = await supabase
@@ -49,36 +57,18 @@ export default function DashboardLayout() {
         };
         fetchRecon();
         
-        const reconChannel = supabase.channel('recon_badge_changes')
+        reconChannel = supabase.channel('recon_badge_changes-' + Date.now())
           .on('postgres_changes', { event: '*', schema: 'public', table: 'reconciliation_issues', filter: `user_id=eq.${user.id}` }, fetchRecon)
           .subscribe();
       }
-
-      if (user) {
-        const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-        if (data?.role === 'admin') {
-          setIsAdmin(true);
-        }
-      }
     };
-    checkAdmin();
-      // Fetch reconciliation count
-      const fetchRecon = async () => {
-        const { count } = await supabase
-          .from('reconciliation_issues')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-          .eq('status', 'open');
-        setReconCount(count || 0);
-      };
-      if (user) fetchRecon();
+    
+    checkAdminAndRecon();
 
-      const reconChannel = supabase.channel('recon_badge')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'reconciliation_issues' }, fetchRecon)
-        .subscribe();
-  
-    return () => { supabase.removeChannel(reconChannel); };
-  }, [user]);
+    return () => { 
+      if (reconChannel) supabase.removeChannel(reconChannel); 
+    };
+  }, []);
 
 
   const isActive = (path: string) => {
