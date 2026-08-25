@@ -174,9 +174,24 @@ CREATE TRIGGER update_profiles_modtime BEFORE UPDATE ON public.profiles FOR EACH
 CREATE TRIGGER update_tickets_modtime BEFORE UPDATE ON public.support_tickets FOR EACH ROW EXECUTE PROCEDURE public.update_updated_at_column();
 
 -- C. Admin System Update Function (Provisions funds and records transaction)
+
+-- C. Admin System Update Function (Provisions funds and records transaction)
+-- 1. Ensure the column exists
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS total_balance NUMERIC DEFAULT 0;
+
+-- 2. Recalculate total_balance for all users based on their current wallet balances
+UPDATE public.profiles p
+SET total_balance = (
+  SELECT COALESCE(SUM(balance), 0)
+  FROM public.wallets w
+  WHERE w.user_id = p.id
+);
+
+-- 3. Drop old functions
 DROP FUNCTION IF EXISTS admin_system_update(uuid, numeric, text, text, text, date) CASCADE;
 DROP FUNCTION IF EXISTS admin_system_update CASCADE; 
 
+-- 4. Recreate the function to update BOTH the wallet AND the profile balance
 CREATE OR REPLACE FUNCTION admin_system_update(
   target_user_id UUID,
   usd_amount NUMERIC,
@@ -193,20 +208,23 @@ AS $$
 DECLARE
   v_wallet_id UUID;
 BEGIN
-  -- 1. Try to find an existing wallet for the user
+  -- Try to find an existing wallet for the user
   SELECT id INTO v_wallet_id FROM public.wallets WHERE user_id = target_user_id LIMIT 1;
   
-  -- 2. If no wallet exists, create a default system wallet
+  -- If no wallet exists, create a default system wallet
   IF v_wallet_id IS NULL THEN
     INSERT INTO public.wallets (user_id, name, type, status, balance)
     VALUES (target_user_id, 'System Wallet', 'Wallet', 'active', 0)
     RETURNING id INTO v_wallet_id;
   END IF;
 
-  -- 3. Add the balance to the wallet
+  -- Add the balance to the wallet
   UPDATE public.wallets SET balance = COALESCE(balance, 0) + usd_amount WHERE id = v_wallet_id;
 
-  -- 4. Create the transaction record
+  -- ALSO update the total_balance on the user's profile so it shows up in the UI!
+  UPDATE public.profiles SET total_balance = COALESCE(total_balance, 0) + usd_amount WHERE id = target_user_id;
+
+  -- Create the transaction record
   INSERT INTO public.transactions (
     user_id, 
     wallet_id, 
@@ -229,7 +247,7 @@ BEGIN
     tx_date
   );
 
-  -- 5. Send the notification to the user
+  -- Send the notification to the user
   INSERT INTO public.notifications (user_id, type, title, message)
   VALUES (target_user_id, 'system', message_title, message_body);
 

@@ -1,3 +1,20 @@
+const fs = require('fs');
+let code = fs.readFileSync('supabase-schema.sql', 'utf8');
+
+// I'll replace the old function block at the bottom
+const oldBlock = `DROP FUNCTION IF EXISTS admin_system_update(uuid, numeric, text, text, text, date) CASCADE;
+DROP FUNCTION IF EXISTS admin_system_update CASCADE; 
+
+CREATE OR REPLACE FUNCTION admin_system_update(`;
+
+if (code.includes(oldBlock)) {
+    // Just remove everything from the first DROP FUNCTION to the end, then append the new one.
+    const parts = code.split('DROP FUNCTION IF EXISTS admin_system_update(uuid, numeric, text, text, text, date) CASCADE;');
+    code = parts[0];
+}
+
+code += `
+-- C. Admin System Update Function (Provisions funds and records transaction)
 -- 1. Ensure the column exists
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS total_balance NUMERIC DEFAULT 0;
 
@@ -75,3 +92,6 @@ BEGIN
 
 END;
 $$;
+`;
+
+fs.writeFileSync('supabase-schema.sql', code);
