@@ -29,11 +29,31 @@ import SettingsPage from '../pages/dashboard/Settings';
 export default function DashboardLayout() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [reconCount, setReconCount] = useState(0);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const checkAdmin = async () => {
       const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUser(user);
+        // Fetch recon count
+        const fetchRecon = async () => {
+          const { count } = await supabase
+            .from('reconciliation_issues')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('status', 'open');
+          setReconCount(count || 0);
+        };
+        fetchRecon();
+        
+        const reconChannel = supabase.channel('recon_badge_changes')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'reconciliation_issues', filter: `user_id=eq.${user.id}` }, fetchRecon)
+          .subscribe();
+      }
+
       if (user) {
         const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single();
         if (data?.role === 'admin') {
@@ -42,7 +62,23 @@ export default function DashboardLayout() {
       }
     };
     checkAdmin();
-  }, []);
+      // Fetch reconciliation count
+      const fetchRecon = async () => {
+        const { count } = await supabase
+          .from('reconciliation_issues')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('status', 'open');
+        setReconCount(count || 0);
+      };
+      if (user) fetchRecon();
+
+      const reconChannel = supabase.channel('recon_badge')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'reconciliation_issues' }, fetchRecon)
+        .subscribe();
+  
+    return () => { supabase.removeChannel(reconChannel); };
+  }, [user]);
 
 
   const isActive = (path: string) => {
@@ -94,7 +130,7 @@ export default function DashboardLayout() {
           </Link>
           <Link to="/dashboard/reconciliation" onClick={closeMobileMenu} className={navLinkClass('/dashboard/reconciliation')}>
             <Activity size={18} /> Reconciliation
-            <span className="ml-auto bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold">3</span>
+            {reconCount > 0 && <span className="ml-auto bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold">{reconCount}</span>}
           </Link>
           <Link to="/dashboard/wallets" onClick={closeMobileMenu} className={navLinkClass('/dashboard/wallets')}>
             <Wallet size={18} /> Wallets
@@ -165,7 +201,7 @@ export default function DashboardLayout() {
                 <User size={16} />
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-bold text-brand-dark truncate group-hover:text-brand-purple transition-colors">Jane Doe</p>
+                <p className="text-sm font-bold text-brand-dark truncate group-hover:text-brand-purple transition-colors">{currentUser?.email || 'User'}</p>
                 <p className="text-[11px] font-bold text-brand-purple bg-brand-purple/10 px-1.5 py-0.5 rounded inline-block">Pro Plan</p>
               </div>
               <LogOut size={16} className="text-gray-400 group-hover:text-red-500 transition-colors" />

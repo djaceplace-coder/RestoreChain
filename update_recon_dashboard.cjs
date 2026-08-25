@@ -1,4 +1,38 @@
+const fs = require('fs');
 
+// Fix layout to fetch real reconciliation count and user name
+const layoutPath = 'src/layouts/DashboardLayout.tsx';
+let layoutCode = fs.readFileSync(layoutPath, 'utf8');
+
+// Replace standard useState hook setup
+layoutCode = layoutCode.replace(
+  'const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);',
+  `const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);\n  const [reconCount, setReconCount] = useState(0);\n  const [currentUser, setCurrentUser] = useState<any>(null);`
+);
+
+// We need to inject the fetch into the useEffect that checks for admin
+layoutCode = layoutCode.replace(
+  'const checkAdmin = async () => {',
+  `const checkAdmin = async () => {\n      const { data: { user } } = await supabase.auth.getUser();\n      if (user) {\n        setCurrentUser(user);\n        // Fetch recon count\n        const fetchRecon = async () => {\n          const { count } = await supabase\n            .from('reconciliation_issues')\n            .select('*', { count: 'exact', head: true })\n            .eq('user_id', user.id)\n            .eq('status', 'open');\n          setReconCount(count || 0);\n        };\n        fetchRecon();\n        \n        const reconChannel = supabase.channel('recon_badge_changes')\n          .on('postgres_changes', { event: '*', schema: 'public', table: 'reconciliation_issues', filter: \`user_id=eq.\${user.id}\` }, fetchRecon)\n          .subscribe();\n      }\n`
+);
+
+// We need to clean up the hardcoded 3 in the navbar
+layoutCode = layoutCode.replace(
+  '<span className="ml-auto bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold">3</span>',
+  `{reconCount > 0 && <span className="ml-auto bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold">{reconCount}</span>}`
+);
+
+// Replace hardcoded "Jane Doe" with current user email if available
+layoutCode = layoutCode.replace(
+  '<p className="text-sm font-bold text-brand-dark truncate group-hover:text-brand-purple transition-colors">Jane Doe</p>',
+  '<p className="text-sm font-bold text-brand-dark truncate group-hover:text-brand-purple transition-colors">{currentUser?.email || \'User\'}</p>'
+);
+
+fs.writeFileSync(layoutPath, layoutCode);
+
+// Write Recon User Page
+const reconPath = 'src/pages/dashboard/Reconciliation.tsx';
+const reconCode = `
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, CheckCircle, ArrowRight, Activity, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -67,11 +101,11 @@ export default function Reconciliation() {
             </div>
             <div className="divide-y divide-gray-100">
               {issues.map(issue => (
-                <div key={issue.id} className={`p-6 hover:bg-gray-50 transition-colors ${issue.status === 'resolved' ? 'opacity-50' : ''}`}>
+                <div key={issue.id} className={\`p-6 hover:bg-gray-50 transition-colors \${issue.status === 'resolved' ? 'opacity-50' : ''}\`}>
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${issue.status === 'open' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        <span className={\`text-xs font-bold px-2 py-0.5 rounded \${issue.status === 'open' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}\`}>
                           {issue.type}
                         </span>
                         {issue.status === 'resolved' && (
@@ -96,3 +130,6 @@ export default function Reconciliation() {
     </div>
   );
 }
+`;
+fs.writeFileSync(reconPath, reconCode);
+

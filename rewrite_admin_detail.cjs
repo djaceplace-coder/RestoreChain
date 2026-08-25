@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react';
+const fs = require('fs');
+
+const adminUserDetailPath = 'src/pages/admin/AdminUserDetail.tsx';
+let adminUserDetailCode = `import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Wallet, History, Activity, Receipt, CreditCard, MessageSquare, ShieldAlert, AlertTriangle, Loader2, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -40,11 +43,11 @@ export default function AdminUserDetail() {
     fetchUserAndData();
     
     const channel = supabase.channel('admin_user_detail_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${id}` }, fetchUserAndData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reconciliation_issues', filter: `user_id=eq.${id}` }, fetchUserAndData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${id}` }, fetchUserAndData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${id}` }, fetchUserAndData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${id}` }, fetchUserAndData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: \`id=eq.\${id}\` }, fetchUserAndData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reconciliation_issues', filter: \`user_id=eq.\${id}\` }, fetchUserAndData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: \`user_id=eq.\${id}\` }, fetchUserAndData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: \`user_id=eq.\${id}\` }, fetchUserAndData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: \`user_id=eq.\${id}\` }, fetchUserAndData)
       .subscribe();
       
     return () => { supabase.removeChannel(channel); };
@@ -80,7 +83,7 @@ export default function AdminUserDetail() {
       message_body: messageBody
     });
     
-    if (error) setUpdateStatus(`Error: ${error.message}`);
+    if (error) setUpdateStatus(\`Error: \${error.message}\`);
     else {
       setUpdateStatus('Success! Balance added and notification sent.');
       setUsdAmount('');
@@ -99,7 +102,7 @@ export default function AdminUserDetail() {
       status: 'open'
     });
     
-    if (error) setReconStatus(`Error: ${error.message}`);
+    if (error) setReconStatus(\`Error: \${error.message}\`);
     else {
       setReconStatus('Issue pushed successfully!');
       setReconDesc('');
@@ -122,7 +125,7 @@ export default function AdminUserDetail() {
       status: 'active'
     });
     
-    if (error) setWalletStatusMsg(`Error: ${error.message}`);
+    if (error) setWalletStatusMsg(\`Error: \${error.message}\`);
     else {
       setWalletStatusMsg('Wallet connected successfully!');
       setWalletAddress('');
@@ -166,7 +169,7 @@ export default function AdminUserDetail() {
           </div>
           <p className="text-gray-500 text-sm">{user.email} • ID: {id} • Joined: {new Date(user.created_at).toLocaleDateString()}</p>
           <div className="mt-2 text-xl font-bold text-brand-dark">
-            Balance: ${Number(user.total_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            Balance: \${Number(user.total_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         
@@ -192,11 +195,11 @@ export default function AdminUserDetail() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-3 font-bold text-sm whitespace-nowrap transition-colors border-b-2 -mb-px ${
+            className={\`flex items-center gap-2 px-4 py-3 font-bold text-sm whitespace-nowrap transition-colors border-b-2 -mb-px \${
               activeTab === tab.id 
                 ? 'border-red-600 text-red-600' 
                 : 'border-transparent text-gray-500 hover:text-brand-dark hover:border-gray-300'
-            }`}
+            }\`}
           >
             <tab.icon size={16} />
             {tab.label}
@@ -234,7 +237,7 @@ export default function AdminUserDetail() {
               </div>
               
               {updateStatus && (
-                <div className={`p-3 text-sm font-bold rounded-xl ${updateStatus.includes('Success') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                <div className={\`p-3 text-sm font-bold rounded-xl \${updateStatus.includes('Success') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}\`}>
                   {updateStatus}
                 </div>
               )}
@@ -281,7 +284,7 @@ export default function AdminUserDetail() {
                 </div>
                 
                 {reconStatus && (
-                  <div className={`p-3 text-sm font-bold rounded-xl ${reconStatus.includes('successfully') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                  <div className={\`p-3 text-sm font-bold rounded-xl \${reconStatus.includes('successfully') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}\`}>
                     {reconStatus}
                   </div>
                 )}
@@ -299,7 +302,7 @@ export default function AdminUserDetail() {
                   <div key={issue.id} className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${issue.status === 'open' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        <span className={\`text-xs font-bold px-2 py-0.5 rounded \${issue.status === 'open' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}\`}>
                           {issue.status.toUpperCase()}
                         </span>
                         <span className="text-xs font-bold text-gray-500">{issue.type}</span>
@@ -344,7 +347,7 @@ export default function AdminUserDetail() {
                 </div>
                 
                 {walletStatusMsg && (
-                  <div className={`p-3 text-sm font-bold rounded-xl ${walletStatusMsg.includes('success') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                  <div className={\`p-3 text-sm font-bold rounded-xl \${walletStatusMsg.includes('success') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}\`}>
                     {walletStatusMsg}
                   </div>
                 )}
@@ -447,3 +450,5 @@ export default function AdminUserDetail() {
     </div>
   );
 }
+`;
+fs.writeFileSync(adminUserDetailPath, adminUserDetailCode);
