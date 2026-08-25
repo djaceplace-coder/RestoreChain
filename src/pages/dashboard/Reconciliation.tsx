@@ -2,10 +2,8 @@ import React from 'react';
 import { AlertTriangle, CheckCircle, Search, ArrowRight, HelpCircle } from 'lucide-react';
 
 export default function Reconciliation() {
-  const unresolvedItems = [
-    { id: 'RC-1049', type: 'Missing Cost Basis', asset: 'ETH', date: 'Oct 12, 2026', issue: 'Sent 2.5 ETH to external wallet. We need to know if this was a transfer to your own wallet or a payment.', status: 'open' },
-    { id: 'RC-1052', type: 'Orphaned Transfer', asset: 'USDC', date: 'Oct 14, 2026', issue: 'Received 10,000 USDC but the source wallet is not connected.', status: 'open' },
-    { id: 'RC-1088', type: 'Unclassified DeFi', asset: 'UNI-V2', date: 'Oct 18, 2026', issue: 'Liquidity provision detected. Please confirm the pair and amounts.', status: 'open' },
+  const unresolvedItems: any[] = [
+    // Empty by default for new signups
   ];
 
   return (
@@ -21,16 +19,16 @@ export default function Reconciliation() {
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Ledger Health</p>
             <div className="flex items-center gap-2">
               <div className="w-32 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="bg-orange-500 h-full rounded-full" style={{ width: '92%' }}></div>
+                <div className="bg-green-500 h-full rounded-full" style={{ width: '100%' }}></div>
               </div>
-              <span className="font-bold text-brand-dark">92%</span>
+              <span className="font-bold text-brand-dark">100%</span>
             </div>
           </div>
           <div className="w-px h-10 bg-gray-200"></div>
           <div>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Needs Review</p>
-            <p className="font-bold text-red-500 text-lg leading-none flex items-center gap-1">
-              <AlertTriangle size={16} /> 3 Items
+            <p className="font-bold text-gray-500 text-lg leading-none flex items-center gap-1">
+              <CheckCircle size={16} className="text-green-500" /> 0 Items
             </p>
           </div>
         </div>
@@ -98,11 +96,11 @@ export default function Reconciliation() {
           
           {unresolvedItems.length === 0 && (
             <div className="p-12 text-center">
-              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle size={32} />
+              <div className="w-16 h-16 bg-blue-100 text-brand-purple rounded-full flex items-center justify-center mx-auto mb-4">
+                <HelpCircle size={32} />
               </div>
-              <h3 className="text-xl font-bold text-brand-dark mb-2">You're all caught up!</h3>
-              <p className="text-brand-text-gray">Your ledger is 100% reconciled and ready for tax reporting.</p>
+              <h3 className="text-xl font-bold text-brand-dark mb-2">System Analyzing</h3>
+              <p className="text-brand-text-gray">The system is currently reviewing your accounts. We will get back to you with any missing cost basis or reconciliation issues. Continue using your dashboard.</p>
             </div>
           )}
         </div>

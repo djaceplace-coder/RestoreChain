@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
+import { usePWAInstall } from '../hooks/usePWAInstall';
+import { Download } from 'lucide-react';
 
 export default function Footer() {
+  const { isInstallable, installPWA } = usePWAInstall();
+
   return (
     <footer className="bg-white pt-20 pb-10 border-t border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -16,20 +20,12 @@ export default function Footer() {
               The premier digital asset recovery and blockchain forensic security platform.
             </p>
             <div className="flex gap-4">
-              {/* App Store Badge placeholders */}
-              <button className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-800 transition-colors">
-                <div className="w-6 h-6 bg-white/20 rounded-full"></div>
-                <div className="text-left">
-                  <div className="text-[10px] text-gray-300 leading-none">Download on the</div>
-                  <div className="text-sm font-semibold leading-tight">App Store</div>
-                </div>
-              </button>
-              <button className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-800 transition-colors">
-                <div className="w-6 h-6 bg-white/20 rounded-full"></div>
-                <div className="text-left">
-                  <div className="text-[10px] text-gray-300 leading-none">GET IT ON</div>
-                  <div className="text-sm font-semibold leading-tight">Google Play</div>
-                </div>
+              <button 
+                onClick={installPWA}
+                className="bg-brand-dark text-white px-6 py-3 rounded-xl flex items-center gap-3 hover:bg-black transition-colors font-bold shadow-sm"
+              >
+                <Download size={20} />
+                Install App
               </button>
             </div>
           </div>

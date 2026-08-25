@@ -63,11 +63,15 @@ export default function Portfolio() {
           <p className="text-purple-100 text-sm max-w-md">Enable push notifications for critical reconciliation updates and approve multi-sig transactions on the go.</p>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-sm backdrop-blur-sm transition-colors border border-white/20">
-            App Store
-          </button>
-          <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-sm backdrop-blur-sm transition-colors border border-white/20">
-            Google Play
+          <button 
+            onClick={() => {
+              // Standard PWA install logic can be used here or trigger global hook
+              // We'll leave it as a visual call to action since the global hook handles the prompt
+              window.dispatchEvent(new CustomEvent('pwa-install-request'));
+            }}
+            className="px-4 py-2 bg-white text-brand-purple hover:bg-gray-50 rounded-xl font-bold text-sm transition-colors shadow-sm"
+          >
+            Install App
           </button>
         </div>
       </div>
