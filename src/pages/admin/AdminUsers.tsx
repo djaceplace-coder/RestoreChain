@@ -45,7 +45,7 @@ export default function AdminUsers() {
           onUserCreated={handleUserCreated} 
         />
       )}
-      <header className="mb-8 flex items-center justify-between">
+      <header className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-brand-dark mb-2">Users</h1>
           <p className="text-gray-500">Manage all registered accounts.</p>

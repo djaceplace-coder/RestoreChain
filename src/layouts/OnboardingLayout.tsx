@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import OnboardingGoals from '../pages/onboarding/OnboardingGoals';
 import OnboardingConnect from '../pages/onboarding/OnboardingConnect';
@@ -6,6 +6,12 @@ import OnboardingReview from '../pages/onboarding/OnboardingReview';
 
 export default function OnboardingLayout() {
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [location.pathname]);
+
   
   const getStepNumber = () => {
     if (location.pathname.includes('/goals')) return 1;
@@ -48,7 +54,7 @@ export default function OnboardingLayout() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-6 py-12">
+      <main ref={mainRef} className="flex-1 flex flex-col items-center justify-center p-6 py-12 scroll-smooth overflow-y-auto">
         <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden relative">
           <Routes>
             <Route path="/goals" element={<OnboardingGoals />} />

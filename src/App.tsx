@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
 import About from './pages/About';
 import Services from './pages/Services';
@@ -95,7 +96,9 @@ function AppContent() {
 export default function App() {
   return (
     <Router>
-      <AppContent />
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
     </Router>
   );
 }

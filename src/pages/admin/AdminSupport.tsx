@@ -20,7 +20,7 @@ export default function AdminSupport() {
         if (!map.has(m.user_id)) {
           map.set(m.user_id, {
             user_id: m.user_id,
-            email: m.profiles?.email || 'Unknown',
+            email: (m.profiles as any)?.email || 'Unknown',
             latest_time: m.created_at
           });
         }

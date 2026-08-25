@@ -1,9 +1,7 @@
 const fs = require('fs');
 
-const layoutPath = 'src/layouts/DashboardLayout.tsx';
-let layoutCode = fs.readFileSync(layoutPath, 'utf8');
+let dbCode = fs.readFileSync('src/layouts/DashboardLayout.tsx', 'utf8');
 
-layoutCode = layoutCode.replace('  const [reconCount, setReconCount] = useState(0);\n  const [currentUser, setCurrentUser] = useState<any>(null);\n  const [reconCount, setReconCount] = useState(0);', '  const [reconCount, setReconCount] = useState(0);\n  const [currentUser, setCurrentUser] = useState<any>(null);');
-layoutCode = layoutCode.replace('      const { data: { user } } = await supabase.auth.getUser();\n      if (user) {\n        const { data } = await supabase.from(\'profiles\').select(\'role\').eq(\'id\', user.id).single();', '      if (user) {\n        const { data } = await supabase.from(\'profiles\').select(\'role\').eq(\'id\', user.id).single();');
+dbCode = dbCode.replace("const isActive = (path: string, exact = false) => {", "useEffect(() => {\n    mainRef.current?.scrollTo(0, 0);\n  }, [location.pathname]);\n\n  const isActive = (path: string, exact = false) => {");
 
-fs.writeFileSync(layoutPath, layoutCode);
+fs.writeFileSync('src/layouts/DashboardLayout.tsx', dbCode);

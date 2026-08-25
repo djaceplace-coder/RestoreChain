@@ -23,6 +23,7 @@ export default function AdminUserDetail() {
   const [assetName, setAssetName] = useState('USD');
   const [messageTitle, setMessageTitle] = useState('Balance Updated');
   const [messageBody, setMessageBody] = useState('An admin has initialized your account balance.');
+  const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
   const [updateStatus, setUpdateStatus] = useState('');
 
   // Recon Form State

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Loader2, 
   ShieldAlert, Users, List, MessageSquare, CreditCard, Shield, LayoutDashboard, Search, LogOut, Menu, X
 } from 'lucide-react';
@@ -17,6 +17,8 @@ export default function AdminLayout() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [supportQueueCount, setSupportQueueCount] = useState(0);
+  const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -29,7 +31,28 @@ export default function AdminLayout() {
       setIsAdmin(data?.is_admin === true);
     };
     checkAdmin();
+    
+    // Fetch unique users in support
+    const fetchSupportCount = async () => {
+      const { data } = await supabase.from('support_messages').select('user_id');
+      if (data) {
+        const unique = new Set(data.map(d => d.user_id));
+        setSupportQueueCount(unique.size);
+      }
+    };
+    fetchSupportCount();
+    
+    const channel = supabase.channel('layout_support')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_messages' }, fetchSupportCount)
+      .subscribe();
+      
+    return () => { supabase.removeChannel(channel); };
   }, []);
+
+  // Scroll to top on route change
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [location.pathname]);
 
   if (isAdmin === null) {
     return (
@@ -98,7 +121,7 @@ export default function AdminLayout() {
           </Link>
           <Link to="/admin/support" onClick={closeMobileMenu} className={navLinkClass('/admin/support')}>
             <MessageSquare size={18} /> Support Queue
-            <span className="ml-auto bg-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">12</span>
+            {supportQueueCount > 0 && <span className="ml-auto bg-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">{supportQueueCount}</span>}
           </Link>
           <Link to="/admin/subscriptions" onClick={closeMobileMenu} className={navLinkClass('/admin/subscriptions')}>
             <CreditCard size={18} /> Subscriptions
@@ -116,7 +139,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main ref={mainRef} className="flex-1 overflow-y-auto scroll-smooth">
         <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-4 flex-1">
             <button 

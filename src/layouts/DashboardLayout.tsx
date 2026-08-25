@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, Activity, Wallet, History, Coins, Image, 
   TrendingUp, BarChart3, Receipt, FileText, Download, Users, 
@@ -31,6 +31,7 @@ export default function DashboardLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [reconCount, setReconCount] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -201,7 +202,7 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main ref={mainRef} className="flex-1 overflow-y-auto scroll-smooth">
         {/* Topbar for mobile + search */}
         <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-4 flex-1">
