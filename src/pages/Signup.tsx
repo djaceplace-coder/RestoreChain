@@ -32,7 +32,7 @@ export default function Signup() {
     if (error) {
       setMessage(error.message);
     } else {
-      setMessage('Success! Logging you in...');
+      setMessage('Account created successfully! Logging you in...');
       setTimeout(() => navigate('/onboarding'), 1000);
     }
   };

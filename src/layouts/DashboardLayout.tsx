@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Activity, Wallet, History, Coins, Image, 
   TrendingUp, BarChart3, Receipt, FileText, Download, Users, 
-  Bell, HelpCircle, HeartPulse, Settings, LogOut, Search, User,
+  Bell, HelpCircle, HeartPulse, Settings, LogOut, Search, User, Shield,
   Menu, X
 } from 'lucide-react';
 import { Link, Routes, Route, useLocation } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 // Placeholder imports for routes
 import Portfolio from '../pages/dashboard/Portfolio';
@@ -28,6 +29,21 @@ import SettingsPage from '../pages/dashboard/Settings';
 export default function DashboardLayout() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (data?.role === 'admin') {
+          setIsAdmin(true);
+        }
+      }
+    };
+    checkAdmin();
+  }, []);
+
 
   const isActive = (path: string) => {
     if (path === '/dashboard' && location.pathname === '/dashboard') return true;
@@ -134,6 +150,11 @@ export default function DashboardLayout() {
           <Link to="/dashboard/support" onClick={closeMobileMenu} className={navLinkClass('/dashboard/support')}>
             <HelpCircle size={18} /> Support
           </Link>
+                    {isAdmin && (
+            <Link to="/admin" className="flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-colors text-sm text-red-600 hover:bg-red-50 hover:text-red-700 mt-2">
+              <Shield size={18} /> Admin Panel
+            </Link>
+          )}
           <Link to="/dashboard/settings" onClick={closeMobileMenu} className={navLinkClass('/dashboard/settings')}>
             <Settings size={18} /> Settings
           </Link>
