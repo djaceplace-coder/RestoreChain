@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { 
+import React, { useState, useEffect } from 'react';
+import { Loader2, 
   ShieldAlert, Users, List, MessageSquare, CreditCard, Shield, LayoutDashboard, Search, LogOut, Menu, X
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { Link, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 
 // Placeholder imports for Admin views
@@ -15,6 +16,32 @@ import AdminAuditLog from '../pages/admin/AdminAuditLog';
 export default function AdminLayout() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      const { data } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single();
+      setIsAdmin(data?.is_admin === true);
+    };
+    checkAdmin();
+  }, []);
+
+  if (isAdmin === null) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-red-600" size={32} />
+      </div>
+    );
+  }
+
+  if (isAdmin === false) {
+    return <Navigate to="/dashboard" replace />;
+  }
   
   // NOTE: In a real app, you would check `profiles.role === 'admin'` here
   // and redirect non-admins using <Navigate to="/dashboard" />.
