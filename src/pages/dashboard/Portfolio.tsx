@@ -1,18 +1,64 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, ShieldCheck } from 'lucide-react';
+
+import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, ShieldCheck, Loader2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 export default function Portfolio() {
+  
   const [showBalance, setShowBalance] = useState(true);
   const [timeRange, setTimeRange] = useState('1M');
+  
+  const [assets, setAssets] = useState<any[]>([]);
+  const [totalValue, setTotalValue] = useState(0);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const assets = [
-    { name: 'Bitcoin', symbol: 'BTC', balance: 1.245, value: 84500.20, change: 4.2, color: 'bg-orange-500' },
-    { name: 'Ethereum', symbol: 'ETH', balance: 14.5, value: 45200.50, change: -1.2, color: 'bg-blue-500' },
-    { name: 'USDC', symbol: 'USDC', balance: 12450.00, value: 12450.00, change: 0, color: 'bg-blue-400' },
-    { name: 'Solana', symbol: 'SOL', balance: 145.2, value: 14200.40, change: 12.5, color: 'bg-purple-500' },
-  ];
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user);
+    };
+    init();
+  }, []);
 
-  const totalValue = assets.reduce((sum, asset) => sum + asset.value, 0);
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchData = async () => {
+      // Fetch profile total balance
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('total_balance')
+        .eq('id', user.id)
+        .single();
+        
+      if (profile) setTotalValue(Number(profile.total_balance || 0));
+
+      // Fetch assets
+      const { data: userAssets } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('user_id', user.id);
+        
+      if (userAssets && userAssets.length > 0) {
+        setAssets(userAssets);
+      } else {
+        setAssets([]);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+
+    const channel = supabase.channel('portfolio_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assets', filter: `user_id=eq.${user.id}` }, fetchData)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
+  if (loading) return <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-brand-purple" size={32} /></div>;
 
   return (
     <div className="animate-fade-in">
@@ -35,12 +81,11 @@ export default function Portfolio() {
           </div>
           <div className="flex items-center gap-2 mt-2">
             <span className="flex items-center text-sm font-bold text-green-500">
-              <ArrowUpRight size={16} /> $4,240.50 (2.4%)
+              <ArrowUpRight size={16} /> $0.00 (0.0%)
             </span>
             <span className="text-sm text-gray-500">Past 24 hours</span>
           </div>
         </div>
-
         <div className="flex bg-gray-100 p-1 rounded-lg w-fit">
           {['24H', '1W', '1M', '1Y', 'ALL'].map(range => (
             <button 
@@ -56,21 +101,13 @@ export default function Portfolio() {
         </div>
       </div>
 
-      {/* Cross promo card */}
       <div className="bg-gradient-to-r from-brand-purple to-blue-600 rounded-2xl p-6 mb-8 text-white flex flex-col md:flex-row items-center justify-between gap-6">
         <div>
           <h3 className="text-xl font-bold font-display mb-2">Secure your account with the mobile app</h3>
           <p className="text-purple-100 text-sm max-w-md">Enable push notifications for critical reconciliation updates and approve multi-sig transactions on the go.</p>
         </div>
         <div className="flex gap-3">
-          <button 
-            onClick={() => {
-              // Standard PWA install logic can be used here or trigger global hook
-              // We'll leave it as a visual call to action since the global hook handles the prompt
-              window.dispatchEvent(new CustomEvent('pwa-install-request'));
-            }}
-            className="px-4 py-2 bg-white text-brand-purple hover:bg-gray-50 rounded-xl font-bold text-sm transition-colors shadow-sm"
-          >
+          <button className="px-4 py-2 bg-white text-brand-purple hover:bg-gray-50 rounded-xl font-bold text-sm transition-colors shadow-sm">
             Install App
           </button>
         </div>
@@ -81,47 +118,53 @@ export default function Portfolio() {
           <h2 className="text-lg font-bold font-display text-brand-dark">Your Assets</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/50 text-xs text-gray-500 uppercase tracking-wider">
-                <th className="px-6 py-4 font-medium">Asset</th>
-                <th className="px-6 py-4 font-medium text-right">Balance</th>
-                <th className="px-6 py-4 font-medium text-right">Price</th>
-                <th className="px-6 py-4 font-medium text-right">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {assets.map((asset) => (
-                <tr key={asset.symbol} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full ${asset.color} flex items-center justify-center text-white font-bold text-xs`}>
-                        {asset.symbol[0]}
-                      </div>
-                      <div>
-                        <p className="font-bold text-brand-dark">{asset.name}</p>
-                        <p className="text-xs text-gray-500">{asset.symbol}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <p className="font-bold text-brand-dark">{showBalance ? asset.balance.toLocaleString() : '••••'}</p>
-                    <p className="text-xs text-gray-500">{asset.symbol}</p>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <p className="font-bold text-brand-dark">${(asset.value / asset.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-                    <div className={`text-xs font-bold flex items-center justify-end gap-1 ${asset.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {asset.change >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                      {Math.abs(asset.change)}%
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <p className="font-bold text-brand-dark">{showBalance ? `$${asset.value.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••'}</p>
-                  </td>
+          {assets.length === 0 ? (
+             <div className="p-12 text-center text-gray-500">No assets found. Waiting for system initialization.</div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 text-xs text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 font-medium">Asset</th>
+                  <th className="px-6 py-4 font-medium text-right">Balance</th>
+                  <th className="px-6 py-4 font-medium text-right">Price</th>
+                  <th className="px-6 py-4 font-medium text-right">Value</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {assets.map((asset) => (
+                  <tr key={asset.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full ${asset.color || 'bg-blue-500'} flex items-center justify-center text-white font-bold text-xs`}>
+                          {asset.symbol[0]}
+                        </div>
+                        <div>
+                          <p className="font-bold text-brand-dark">{asset.name}</p>
+                          <p className="text-xs text-gray-500">{asset.symbol}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="font-bold text-brand-dark">{showBalance ? Number(asset.balance).toLocaleString() : '••••'}</p>
+                      <p className="text-xs text-gray-500">{asset.symbol}</p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="font-bold text-brand-dark">
+                        ${Number(asset.balance) > 0 ? (Number(asset.value_usd) / Number(asset.balance)).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}
+                      </p>
+                      <div className={`text-xs font-bold flex items-center justify-end gap-1 ${(asset.change || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {(asset.change || 0) >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                        {Math.abs(asset.change || 0)}%
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="font-bold text-brand-dark">{showBalance ? `$${Number(asset.value_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '••••'}</p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
