@@ -1,117 +1,200 @@
-import React from 'react';
-import { User, Mail, Bell } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, Receipt, CreditCard, Bell, Shield, Info } from 'lucide-react';
 
 export default function Settings() {
+  const [activeTab, setActiveTab] = useState('tax-elections');
+
   return (
-    <div className="animate-fade-in max-w-4xl">
-      <header className="mb-10">
-        <h1 className="text-3xl font-display font-bold text-brand-dark mb-2">Account Settings</h1>
-        <p className="text-brand-text-gray">Manage your personal information and preferences.</p>
+    <div className="animate-fade-in max-w-5xl">
+      <header className="mb-8">
+        <h1 className="text-3xl font-display font-bold text-brand-dark mb-2">Settings</h1>
+        <p className="text-brand-text-gray">Manage your account preferences, tax logic, and billing.</p>
       </header>
 
-      <div className="space-y-6">
+      {/* Tabs */}
+      <div className="flex overflow-x-auto gap-2 mb-8 border-b border-gray-200 pb-px">
+        {[
+          { id: 'account', label: 'Account', icon: User },
+          { id: 'tax-elections', label: 'Tax Elections', icon: Receipt },
+          { id: 'subscription', label: 'Subscription', icon: CreditCard },
+          { id: 'notifications', label: 'Notifications', icon: Bell },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-3 font-bold text-sm whitespace-nowrap transition-colors border-b-2 -mb-px ${
+              activeTab === tab.id 
+                ? 'border-brand-purple text-brand-purple' 
+                : 'border-transparent text-gray-500 hover:text-brand-dark hover:border-gray-300'
+            }`}
+          >
+            <tab.icon size={16} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8">
         
-        {/* Profile Information */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8">
-          <div className="flex items-start gap-4 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <User size={24} />
+        {activeTab === 'account' && (
+          <div className="animate-fade-in space-y-6 max-w-2xl">
+            <h2 className="text-xl font-bold text-brand-dark mb-4">Account Profile</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">First Name</label>
+                <input type="text" defaultValue="Jane" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-purple" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Last Name</label>
+                <input type="text" defaultValue="Doe" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-purple" />
+              </div>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-brand-dark">Profile Information</h2>
-              <p className="text-brand-text-gray mt-1 text-sm">Update your personal details here.</p>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Email Address</label>
+              <input type="email" defaultValue="jane@example.com" disabled className="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed" />
+              <p className="text-xs text-gray-500 mt-1">Contact support to change your email address.</p>
+            </div>
+            <button className="px-6 py-3 bg-brand-dark text-white font-bold rounded-xl hover:bg-black transition-colors">
+              Save Changes
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'subscription' && (
+          <div className="animate-fade-in max-w-2xl">
+            <h2 className="text-xl font-bold text-brand-dark mb-4">Current Plan</h2>
+            <div className="bg-gradient-to-r from-brand-purple to-blue-600 rounded-2xl p-6 text-white mb-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="font-bold text-2xl font-display">Pro Plan</h3>
+                  <p className="text-purple-100 text-sm">Up to 10,000 transactions/year</p>
+                </div>
+                <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold backdrop-blur-sm border border-white/20">Active</span>
+              </div>
+              <p className="text-3xl font-bold mb-1">$299<span className="text-lg font-normal opacity-80">/year</span></p>
+            </div>
+            <button className="px-6 py-3 bg-white border border-gray-200 text-brand-dark font-bold rounded-xl hover:bg-gray-50 transition-colors">
+              Manage Billing (Stripe)
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'notifications' && (
+          <div className="animate-fade-in max-w-2xl space-y-6">
+            <h2 className="text-xl font-bold text-brand-dark mb-4">Notification Preferences</h2>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div>
+                  <h4 className="font-bold text-brand-dark">Email Alerts</h4>
+                  <p className="text-sm text-gray-500">Receive tax deadline and sync error alerts.</p>
+                </div>
+                <input type="checkbox" defaultChecked className="w-5 h-5 accent-brand-purple" />
+              </div>
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div>
+                  <h4 className="font-bold text-brand-dark">Push Notifications</h4>
+                  <p className="text-sm text-gray-500">Get notified when support replies to your ticket.</p>
+                </div>
+                <input type="checkbox" defaultChecked className="w-5 h-5 accent-brand-purple" />
+              </div>
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div>
+                  <h4 className="font-bold text-brand-dark">Transaction Activity</h4>
+                  <p className="text-sm text-gray-500">Alerts for large deposits or withdrawals.</p>
+                </div>
+                <input type="checkbox" className="w-5 h-5 accent-brand-purple" />
+              </div>
             </div>
           </div>
-          
-          <form className="space-y-6">
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 border-4 border-white shadow-sm overflow-hidden">
-                <User size={32} />
+        )}
+
+        {activeTab === 'tax-elections' && (
+          <div className="animate-fade-in space-y-8">
+            <div>
+              <h2 className="text-xl font-bold text-brand-dark mb-2">Tax Elections & Logic</h2>
+              <p className="text-sm text-brand-text-gray mb-6">Configure how specific types of crypto transactions are treated for your tax calculations. These settings affect your capital gains and income reports.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <h3 className="font-bold text-brand-dark text-sm uppercase tracking-wider text-gray-500">DeFi & Staking</h3>
+                  
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <label className="font-bold text-brand-dark flex items-center gap-2">
+                        Liquid Staking
+                        <Info size={14} className="text-gray-400 cursor-help" />
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">Treat liquid staking (e.g., ETH to stETH) as non-taxable.</p>
+                    </div>
+                    <input type="checkbox" defaultChecked className="w-5 h-5 accent-brand-purple mt-1" />
+                  </div>
+
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <label className="font-bold text-brand-dark flex items-center gap-2">
+                        Wrapping Crypto
+                        <Info size={14} className="text-gray-400 cursor-help" />
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">Treat wrapping (e.g., ETH to WETH) as non-taxable.</p>
+                    </div>
+                    <input type="checkbox" defaultChecked className="w-5 h-5 accent-brand-purple mt-1" />
+                  </div>
+                  
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <label className="font-bold text-brand-dark flex items-center gap-2">
+                        Liquid Lending
+                        <Info size={14} className="text-gray-400 cursor-help" />
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">Treat depositing collateral for liquid lending as non-taxable.</p>
+                    </div>
+                    <input type="checkbox" defaultChecked className="w-5 h-5 accent-brand-purple mt-1" />
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <h3 className="font-bold text-brand-dark text-sm uppercase tracking-wider text-gray-500">Income & Pools</h3>
+                  
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <label className="font-bold text-brand-dark flex items-center gap-2">
+                        Liquidity Pools
+                        <Info size={14} className="text-gray-400 cursor-help" />
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">Treat entering/exiting LPs as non-taxable events.</p>
+                    </div>
+                    <input type="checkbox" className="w-5 h-5 accent-brand-purple mt-1" />
+                  </div>
+
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <label className="font-bold text-brand-dark flex items-center gap-2">
+                        Staking Rewards
+                        <Info size={14} className="text-gray-400 cursor-help" />
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">Treat staking rewards as taxable income upon receipt.</p>
+                    </div>
+                    <input type="checkbox" defaultChecked className="w-5 h-5 accent-brand-purple mt-1" />
+                  </div>
+                </div>
               </div>
-              <button type="button" className="px-4 py-2 border border-gray-200 font-bold text-sm rounded-xl hover:bg-gray-50 transition-colors">
-                Change Avatar
-              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1" htmlFor="firstName">First Name</label>
-                <input 
-                  id="firstName" 
-                  type="text" 
-                  defaultValue="Jane"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1" htmlFor="lastName">Last Name</label>
-                <input 
-                  id="lastName" 
-                  type="text" 
-                  defaultValue="Doe"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-colors"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-gray-700 mb-1" htmlFor="email">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input 
-                    id="email" 
-                    type="email" 
-                    defaultValue="jane@example.com"
-                    readOnly
-                    className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 text-gray-500 rounded-xl focus:outline-none cursor-not-allowed"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2">Email address cannot be changed directly. Contact support for assistance.</p>
+            <div className="pt-6 border-t border-gray-100">
+              <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <Shield className="text-gray-400 shrink-0 mt-0.5" size={18} />
+                <p className="text-sm text-gray-600">
+                  <strong>Disclaimer:</strong> Changing these settings will immediately trigger a recalculation of your entire tax history. RestoreChain provides software, not legal or tax advice. Consult a tax professional if you are unsure about your local jurisdiction's rules.
+                </p>
               </div>
             </div>
             
-            <div className="pt-4 border-t border-gray-100">
-              <button type="button" className="px-6 py-3 bg-brand-dark text-white font-bold rounded-xl hover:bg-black transition-colors">
-                Save Changes
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Notifications */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8">
-          <div className="flex items-start gap-4 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-              <Bell size={24} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-brand-dark">Notifications</h2>
-              <p className="text-brand-text-gray mt-1 text-sm">Choose what updates you want to receive.</p>
-            </div>
+            <button className="px-6 py-3 bg-brand-dark text-white font-bold rounded-xl hover:bg-black transition-colors shadow-md">
+              Save Tax Elections
+            </button>
           </div>
-          
-          <div className="space-y-4 max-w-2xl">
-            <label className="flex items-start justify-between cursor-pointer p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-              <div>
-                <p className="font-bold text-brand-dark">Case Updates</p>
-                <p className="text-sm text-gray-500 mt-1">Receive emails when your case status changes.</p>
-              </div>
-              <input type="checkbox" defaultChecked className="w-5 h-5 mt-1 accent-brand-purple" />
-            </label>
-            <label className="flex items-start justify-between cursor-pointer p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-              <div>
-                <p className="font-bold text-brand-dark">Security Alerts</p>
-                <p className="text-sm text-gray-500 mt-1">Get notified about new logins and security events.</p>
-              </div>
-              <input type="checkbox" defaultChecked className="w-5 h-5 mt-1 accent-brand-purple" />
-            </label>
-            <label className="flex items-start justify-between cursor-pointer p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-              <div>
-                <p className="font-bold text-brand-dark">Marketing & News</p>
-                <p className="text-sm text-gray-500 mt-1">Receive our monthly newsletter and product updates.</p>
-              </div>
-              <input type="checkbox" className="w-5 h-5 mt-1 accent-brand-purple" />
-            </label>
-          </div>
-        </div>
+        )}
 
       </div>
     </div>

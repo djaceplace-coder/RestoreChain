@@ -1,12 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+  const [message, setMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/dashboard');
+    if (!isSupabaseConfigured() || !supabase) {
+      // Fallback for demo mode
+      navigate('/dashboard');
+      return;
+    }
+    
+    // Real Supabase Login Attempt (using password since we disabled email verification)
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setMessage(error.message);
+    } else {
+      setMessage('Login successful. Redirecting...');
+      setTimeout(() => navigate('/dashboard'), 1000);
+    }
   };
   return (
     <div className="min-h-screen relative flex flex-col justify-center items-center overflow-hidden bg-[#0A0A0F]">
@@ -18,6 +36,13 @@ export default function Login() {
 
       <div className="bg-white p-10 sm:p-12 rounded-3xl shadow-2xl w-full max-w-[460px] relative z-10 mx-4">
         
+        {/* Supabase Warning Banner */}
+        {!isSupabaseConfigured() && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs p-3 rounded-xl">
+            <span className="font-bold">Demo Mode:</span> Supabase is not connected. Enter any email to continue to the dashboard. To connect real users, add your Supabase credentials in the AI Studio Settings (Secrets).
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-8 hover:opacity-80 transition-opacity">
@@ -73,10 +98,17 @@ export default function Login() {
               id="email" 
               type="email" 
               required 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="name@company.com" 
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-colors"
             />
           </div>
+          {message && (
+            <div className={`p-3 text-sm rounded-xl ${message.includes('Check') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              {message}
+            </div>
+          )}
           <button type="submit" className="w-full bg-brand-dark text-white font-bold py-4 px-4 rounded-xl hover:bg-black transition-colors mt-2">
             Continue
           </button>

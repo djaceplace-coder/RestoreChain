@@ -32,13 +32,17 @@ import Terms from './pages/Terms';
 import Carriers from './pages/Carriers';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import Dashboard from './pages/Dashboard';
+
+// Layouts
+import DashboardLayout from './layouts/DashboardLayout';
+import AdminLayout from './layouts/AdminLayout';
+import OnboardingLayout from './layouts/OnboardingLayout';
 
 function AppContent() {
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
-  const isDashboardPage = location.pathname.startsWith('/dashboard');
-  const hideNavAndFooter = isAuthPage || isDashboardPage;
+  const isAppShell = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/onboarding');
+  const hideNavAndFooter = isAuthPage || isAppShell;
 
   return (
     <div className="min-h-screen bg-white selection:bg-brand-purple/20 selection:text-brand-purple flex flex-col">
@@ -76,7 +80,11 @@ function AppContent() {
           <Route path="/signup" element={<Signup />} />
 
           {/* User Panel */}
-          <Route path="/dashboard/*" element={<Dashboard />} />
+          <Route path="/dashboard/*" element={<DashboardLayout />} />
+          <Route path="/onboarding/*" element={<OnboardingLayout />} />
+          
+          {/* Admin Panel */}
+          <Route path="/admin/*" element={<AdminLayout />} />
         </Routes>
       </main>
       {!hideNavAndFooter && <Footer />}
