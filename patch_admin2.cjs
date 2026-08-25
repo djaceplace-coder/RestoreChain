@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+const fs = require('fs');
+const adminUsersPath = 'src/pages/admin/AdminUsers.tsx';
+let adminUsersCode = `import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, MoreVertical, ShieldAlert, UserPlus, Loader2 } from 'lucide-react';
 import AdminCreateUserModal from './AdminCreateUserModal';
@@ -85,23 +87,23 @@ export default function AdminUsers() {
               {users.map(user => (
                 <tr key={user.id} className="hover:bg-gray-50/50 transition-colors group">
                   <td className="px-6 py-4">
-                    <Link to={`/admin/users/${user.id}`} className="block">
+                    <Link to={\`/admin/users/\${user.id}\`} className="block">
                       <p className="font-bold text-brand-dark group-hover:text-red-600 transition-colors">{user.first_name} {user.last_name}</p>
                       <p className="text-xs text-gray-500">{user.email}</p>
                     </Link>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${user.plan === 'Free' ? 'bg-gray-100 text-gray-600' : 'bg-brand-purple/10 text-brand-purple'}`}>
+                    <span className={\`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase \${user.plan === 'Free' ? 'bg-gray-100 text-gray-600' : 'bg-brand-purple/10 text-brand-purple'}\`}>
                       {user.plan || 'Free'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm font-bold text-brand-dark">
-                      ${Number(user.total_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      \${Number(user.total_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${user.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                    <span className={\`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase \${user.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}\`}>
                       {user.role}
                     </span>
                   </td>
@@ -117,3 +119,6 @@ export default function AdminUsers() {
     </div>
   );
 }
+`;
+fs.writeFileSync(adminUsersPath, adminUsersCode);
+

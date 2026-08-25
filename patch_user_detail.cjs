@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+const fs = require('fs');
+const adminUserDetailPath = 'src/pages/admin/AdminUserDetail.tsx';
+let adminUserDetailCode = `import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Wallet, History, Activity, Receipt, CreditCard, MessageSquare, ShieldAlert, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -21,7 +23,7 @@ export default function AdminUserDetail() {
     
     // Subscribe to specific user changes
     const channel = supabase.channel('user_detail_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${id}` }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: \`id=eq.\${id}\` }, () => {
         fetchUser();
       })
       .subscribe();
@@ -53,7 +55,7 @@ export default function AdminUserDetail() {
     });
     
     if (error) {
-      setUpdateStatus(`Error: ${error.message}`);
+      setUpdateStatus(\`Error: \${error.message}\`);
     } else {
       setUpdateStatus('Success! Balance added and notification sent.');
       setUsdAmount('');
@@ -82,7 +84,7 @@ export default function AdminUserDetail() {
           </div>
           <p className="text-gray-500 text-sm">{user.email} • ID: {id} • Joined: {new Date(user.created_at).toLocaleDateString()}</p>
           <div className="mt-2 text-xl font-bold text-brand-dark">
-            Balance: ${Number(user.total_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            Balance: \${Number(user.total_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
         
@@ -108,11 +110,11 @@ export default function AdminUserDetail() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-3 font-bold text-sm whitespace-nowrap transition-colors border-b-2 -mb-px ${
+            className={\`flex items-center gap-2 px-4 py-3 font-bold text-sm whitespace-nowrap transition-colors border-b-2 -mb-px \${
               activeTab === tab.id 
                 ? 'border-red-600 text-red-600' 
                 : 'border-transparent text-gray-500 hover:text-brand-dark hover:border-gray-300'
-            }`}
+            }\`}
           >
             <tab.icon size={16} />
             {tab.label}
@@ -155,7 +157,7 @@ export default function AdminUserDetail() {
               </div>
               
               {updateStatus && (
-                <div className={`p-3 text-sm font-bold rounded-xl ${updateStatus.includes('Success') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                <div className={\`p-3 text-sm font-bold rounded-xl \${updateStatus.includes('Success') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}\`}>
                   {updateStatus}
                 </div>
               )}
@@ -178,3 +180,5 @@ export default function AdminUserDetail() {
     </div>
   );
 }
+`;
+fs.writeFileSync(adminUserDetailPath, adminUserDetailCode);

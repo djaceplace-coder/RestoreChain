@@ -1,9 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { Users, ShieldAlert, CheckCircle, Clock, Search, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function AdminOverview() {
-  const stats = [
+
+  const [stats, setStats] = useState({ users: 0, balance: 0, transactions: 0 });
+  useEffect(() => {
+    const loadStats = async () => {
+      const { count: users } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+      const { data: profiles } = await supabase.from('profiles').select('total_balance');
+      const { count: txs } = await supabase.from('transactions').select('*', { count: 'exact', head: true });
+      
+      const balance = profiles?.reduce((sum, p) => sum + Number(p.total_balance || 0), 0) || 0;
+      setStats({ users: users || 0, balance, transactions: txs || 0 });
+    };
+    loadStats();
+    
+    const channel = supabase.channel('overview_changes')
+      .on('postgres_changes', { event: '*', schema: 'public' }, loadStats)
+      .subscribe();
+      
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+  
+  const staticStats = [
     { label: 'Total Users', value: '4,205', change: '+124 this week', icon: Users, color: 'text-blue-500', bg: 'bg-blue-100' },
     { label: 'Pending Recon', value: '142', change: '-12 since yesterday', icon: ShieldAlert, color: 'text-orange-500', bg: 'bg-orange-100' },
     { label: 'Active Subs', value: '3,892', change: '+85 this week', icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-100' },
