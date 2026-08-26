@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, Activity, Wallet, History, Coins, Image, 
-  TrendingUp, BarChart3, Receipt, FileText, Download, Users, 
-  Bell, HelpCircle, HeartPulse, Settings, LogOut, Search, User, Shield,
-  Menu, X
+  X, Menu, Search, Bell, User, LogOut, LayoutDashboard, Wallet, 
+  History, Settings, Activity, Shield, Coins, Image, TrendingUp, 
+  BarChart3, Receipt, FileText, Download, Users, HeartPulse, HelpCircle 
 } from 'lucide-react';
-import { Link, Routes, Route, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
-// Placeholder imports for routes
 import Portfolio from '../pages/dashboard/Portfolio';
+import Agreement from '../pages/dashboard/Agreement';
 import Reconciliation from '../pages/dashboard/Reconciliation';
 import Wallets from '../pages/dashboard/Wallets';
 import Transactions from '../pages/dashboard/Transactions';
@@ -27,71 +26,64 @@ import AccountHealth from '../pages/dashboard/AccountHealth';
 import SettingsPage from '../pages/dashboard/Settings';
 
 export default function DashboardLayout() {
-  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [reconCount, setReconCount] = useState(0);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const mainRef = useRef<HTMLDivElement>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const mainRef = useRef<HTMLElement>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [kycStatus, setKycStatus] = useState('pending');
+  const [reconCount, setReconCount] = useState(0);
 
   useEffect(() => {
-    let reconChannel: any;
+    if (mainRef.current) {
+      mainRef.current.scrollTo(0, 0);
+    }
+  }, [location.pathname]);
 
-    const checkAdminAndRecon = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setCurrentUser(user);
-        
-        const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-        if (data?.role === 'admin') {
-          setIsAdmin(true);
-        }
-
-        // Fetch recon count
-        const fetchRecon = async () => {
-          const { count } = await supabase
-            .from('reconciliation_issues')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('status', 'open');
-          setReconCount(count || 0);
-        };
-        fetchRecon();
-        
-        reconChannel = supabase.channel('recon_badge_changes-' + Date.now())
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'reconciliation_issues', filter: `user_id=eq.${user.id}` }, fetchRecon)
-          .subscribe();
-      }
-    };
-    
-    checkAdminAndRecon();
-
-    return () => { 
-      if (reconChannel) supabase.removeChannel(reconChannel); 
-    };
+  useEffect(() => {
+    checkUser();
   }, []);
 
-
-  const isActive = (path: string) => {
-    if (path === '/dashboard' && location.pathname === '/dashboard') return true;
-    if (path !== '/dashboard' && location.pathname.startsWith(path)) return true;
-    return false;
+  const checkUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      setCurrentUser(session.user);
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+      if (profile) {
+        setIsAdmin(profile.role === 'admin' || profile.role === 'super_admin');
+        setKycStatus(profile.kyc_status || 'pending');
+      }
+      
+      const { count } = await supabase.from('reconciliation_issues').select('*', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('status', 'open');
+      setReconCount(count || 0);
+    } else {
+      navigate('/login');
+    }
   };
-
-  const navLinkClass = (path: string) => `flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-colors text-sm ${
-    isActive(path)
-      ? 'bg-brand-purple/10 text-brand-purple font-bold'
-      : 'text-brand-text-gray hover:bg-gray-50 hover:text-brand-dark'
-  }`;
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
+  const navLinkClass = (path: string, exact = false) => {
+    const isActive = exact ? location.pathname === path : location.pathname.startsWith(path);
+    return `flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-colors text-sm ${
+      isActive 
+        ? 'bg-brand-purple text-white shadow-md shadow-brand-purple/20' 
+        : 'text-gray-500 hover:bg-gray-100 hover:text-brand-dark'
+    }`;
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex font-sans text-brand-dark">
-      {/* Mobile Menu Overlay */}
+    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+      {/* Mobile menu overlay */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-brand-dark/20 z-40 lg:hidden"
+          className="fixed inset-0 bg-brand-dark/20 backdrop-blur-sm z-40 lg:hidden"
           onClick={closeMobileMenu}
         />
       )}
@@ -100,8 +92,8 @@ export default function DashboardLayout() {
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col h-screen transform transition-transform duration-300 lg:translate-x-0 lg:static ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="p-6 pb-2 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 mb-6 hover:opacity-80 transition-opacity" onClick={closeMobileMenu}>
+        <div className="p-6 flex items-center justify-between">
+          <Link to="/dashboard" className="flex items-center gap-3" onClick={closeMobileMenu}>
             <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl shadow-md">
               R
             </div>
@@ -116,7 +108,12 @@ export default function DashboardLayout() {
         </div>
 
         <nav className="flex-1 px-3 overflow-y-auto pb-6 space-y-1 custom-scrollbar">
-          <Link to="/dashboard" onClick={closeMobileMenu} className={navLinkClass('/dashboard')}>
+          {kycStatus !== 'approved' && (
+          <Link to="/dashboard/agreement" onClick={closeMobileMenu} className={navLinkClass('/dashboard/agreement')}>
+            <FileText size={18} className="text-orange-500" /> Action Required: NDA
+          </Link>
+          )}
+          <Link to="/dashboard" onClick={closeMobileMenu} className={navLinkClass('/dashboard', true)}>
             <LayoutDashboard size={18} /> Portfolio
           </Link>
           <Link to="/dashboard/reconciliation" onClick={closeMobileMenu} className={navLinkClass('/dashboard/reconciliation')}>
@@ -131,16 +128,16 @@ export default function DashboardLayout() {
           </Link>
 
           <div className="my-2 border-t border-gray-100"></div>
-
+          
           <Link to="/dashboard/defi" onClick={closeMobileMenu} className={navLinkClass('/dashboard/defi')}>
             <Coins size={18} /> DeFi Positions
           </Link>
           <Link to="/dashboard/nfts" onClick={closeMobileMenu} className={navLinkClass('/dashboard/nfts')}>
             <Image size={18} /> NFTs
           </Link>
-
+          
           <div className="my-2 border-t border-gray-100"></div>
-
+          
           <Link to="/dashboard/performance" onClick={closeMobileMenu} className={navLinkClass('/dashboard/performance')}>
             <TrendingUp size={18} /> Performance
           </Link>
@@ -158,7 +155,7 @@ export default function DashboardLayout() {
           </Link>
           
           <div className="my-2 border-t border-gray-100"></div>
-
+          
           <Link to="/dashboard/exports" onClick={closeMobileMenu} className={navLinkClass('/dashboard/exports')}>
             <Download size={18} /> Exports
           </Link>
@@ -177,8 +174,9 @@ export default function DashboardLayout() {
           <Link to="/dashboard/support" onClick={closeMobileMenu} className={navLinkClass('/dashboard/support')}>
             <HelpCircle size={18} /> Support
           </Link>
-                    {isAdmin && (
-            <Link to="/admin" className="flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-colors text-sm text-red-600 hover:bg-red-50 hover:text-red-700 mt-2">
+          
+          {isAdmin && (
+            <Link to="/admin" onClick={closeMobileMenu} className="flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-colors text-sm text-red-600 hover:bg-red-50 hover:text-red-700 mt-2">
               <Shield size={18} /> Admin Panel
             </Link>
           )}
@@ -187,16 +185,16 @@ export default function DashboardLayout() {
           </Link>
           
           <div className="mt-2 pt-2 border-t border-gray-200">
-            <Link to="/login" className="flex items-center gap-3 px-4 py-2 hover:bg-white rounded-xl transition-colors group">
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2 hover:bg-white rounded-xl transition-colors group">
               <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
                 <User size={16} />
               </div>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden text-left">
                 <p className="text-sm font-bold text-brand-dark truncate group-hover:text-brand-purple transition-colors">{currentUser?.email || 'User'}</p>
                 <p className="text-[11px] font-bold text-brand-purple bg-brand-purple/10 px-1.5 py-0.5 rounded inline-block">Pro Plan</p>
               </div>
               <LogOut size={16} className="text-gray-400 group-hover:text-red-500 transition-colors" />
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
@@ -212,7 +210,7 @@ export default function DashboardLayout() {
             >
               <Menu size={24} />
             </button>
-            <div className="flex-1 max-w-xl">
+            <div className="flex-1 max-w-xl hidden sm:block">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input 
@@ -234,6 +232,7 @@ export default function DashboardLayout() {
         <div className="p-6 lg:p-10 max-w-7xl mx-auto">
           <Routes>
             <Route path="/" element={<Portfolio />} />
+            <Route path="/agreement" element={<Agreement />} />
             <Route path="/reconciliation" element={<Reconciliation />} />
             <Route path="/wallets" element={<Wallets />} />
             <Route path="/transactions" element={<Transactions />} />

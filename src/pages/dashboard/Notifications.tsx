@@ -39,7 +39,7 @@ export default function Notifications() {
       setExpandedId(id);
       if (!currentlyRead) {
         // Mark as read in db
-        await supabase.from('notifications').update({ read: true }).eq('id', id);
+        await supabase.from('notifications').update({ is_read: true }).eq('id', id);
       }
     }
   };
@@ -47,7 +47,7 @@ export default function Notifications() {
   const markAllAsRead = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from('notifications').update({ read: true }).eq('user_id', user.id).eq('read', false);
+    await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
   };
 
   return (
@@ -78,19 +78,19 @@ export default function Notifications() {
             notifications.map(notif => (
               <div 
                 key={notif.id} 
-                className={`transition-colors ${notif.read ? 'bg-white' : 'bg-brand-purple/5'}`}
+                className={`transition-colors ${notif.is_read ? 'bg-white' : 'bg-brand-purple/5'}`}
               >
                 <div 
                   className="p-6 flex gap-4 cursor-pointer hover:bg-gray-50"
-                  onClick={() => toggleExpand(notif.id, notif.read)}
+                  onClick={() => toggleExpand(notif.id, notif.is_read)}
                 >
-                  <div className={`p-3 rounded-xl shrink-0 h-fit ${notif.read ? 'bg-gray-100 text-gray-400' : 'bg-brand-purple/10 text-brand-purple'}`}>
+                  <div className={`p-3 rounded-xl shrink-0 h-fit ${notif.is_read ? 'bg-gray-100 text-gray-400' : 'bg-brand-purple/10 text-brand-purple'}`}>
                     <Info size={20} />
                   </div>
                   
                   <div className="flex-1">
                     <div className="flex justify-between items-start mb-1">
-                      <h3 className={`font-bold ${notif.read ? 'text-gray-700' : 'text-brand-dark'}`}>{notif.title}</h3>
+                      <h3 className={`font-bold ${notif.is_read ? 'text-gray-700' : 'text-brand-dark'}`}>{notif.title}</h3>
                       <div className="flex items-center gap-4">
                         <span className="text-xs font-bold text-gray-400">
                           {new Date(notif.created_at).toLocaleDateString()}
@@ -100,18 +100,18 @@ export default function Notifications() {
                     </div>
                     {/* Truncated preview when collapsed */}
                     {expandedId !== notif.id && (
-                      <p className="text-sm text-gray-600 line-clamp-1">{notif.body}</p>
+                      <p className="text-sm text-gray-600 line-clamp-1">{notif.message}</p>
                     )}
                     
                     {/* Full content when expanded */}
                     {expandedId === notif.id && (
                       <div className="mt-4 pt-4 border-t border-gray-100 animate-fade-in">
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{notif.body}</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{notif.message}</p>
                       </div>
                     )}
                   </div>
                   
-                  {!notif.read && (
+                  {!notif.is_read && (
                     <div className="w-2 h-2 rounded-full bg-brand-purple mt-2 shrink-0"></div>
                   )}
                 </div>

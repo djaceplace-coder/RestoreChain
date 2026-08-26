@@ -11,6 +11,7 @@ import AdminUsers from '../pages/admin/AdminUsers';
 import AdminUserDetail from '../pages/admin/AdminUserDetail';
 import AdminSupport from '../pages/admin/AdminSupport';
 import AdminSubscriptions from '../pages/admin/AdminSubscriptions';
+import AdminKYC from '../pages/admin/AdminKYC';
 import AdminAuditLog from '../pages/admin/AdminAuditLog';
 
 export default function AdminLayout() {
@@ -34,16 +35,13 @@ export default function AdminLayout() {
     
     // Fetch unique users in support
     const fetchSupportCount = async () => {
-      const { data } = await supabase.from('support_messages').select('user_id');
-      if (data) {
-        const unique = new Set(data.map(d => d.user_id));
-        setSupportQueueCount(unique.size);
-      }
+      const { count } = await supabase.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open');
+      setSupportQueueCount(count || 0);
     };
     fetchSupportCount();
     
     const channel = supabase.channel('layout_support')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_messages' }, fetchSupportCount)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, fetchSupportCount)
       .subscribe();
       
     return () => { supabase.removeChannel(channel); };
@@ -119,6 +117,9 @@ export default function AdminLayout() {
           <Link to="/admin/users" onClick={closeMobileMenu} className={navLinkClass('/admin/users')}>
             <Users size={18} /> Users
           </Link>
+          <Link to="/admin/kyc" onClick={closeMobileMenu} className={navLinkClass('/admin/kyc')}>
+            <ShieldAlert size={18} /> KYC Approvals
+          </Link>
           <Link to="/admin/support" onClick={closeMobileMenu} className={navLinkClass('/admin/support')}>
             <MessageSquare size={18} /> Support Queue
             {supportQueueCount > 0 && <span className="ml-auto bg-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">{supportQueueCount}</span>}
@@ -148,7 +149,7 @@ export default function AdminLayout() {
             >
               <Menu size={24} />
             </button>
-            <div className="flex-1 max-w-xl">
+            <div className="flex-1 max-w-xl hidden sm:block">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input 
@@ -166,10 +167,11 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <div className="p-6 lg:p-10 max-w-7xl mx-auto">
+        <div className="p-4 md:p-6 lg:p-10 max-w-7xl mx-auto">
           <Routes>
             <Route path="/" element={<AdminOverview />} />
             <Route path="/users" element={<AdminUsers />} />
+            <Route path="/kyc" element={<AdminKYC />} />
             <Route path="/users/:id/*" element={<AdminUserDetail />} />
             <Route path="/support" element={<AdminSupport />} />
             <Route path="/subscriptions" element={<AdminSubscriptions />} />

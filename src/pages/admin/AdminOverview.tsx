@@ -15,8 +15,8 @@ export default function AdminOverview() {
       const { count: txs } = await supabase.from('transactions').select('*', { count: 'exact', head: true });
       const { count: recon } = await supabase.from('reconciliation_issues').select('*', { count: 'exact', head: true }).eq('status', 'open');
       const { count: subs } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).neq('tier', 'free');
-      const { data: support } = await supabase.from('support_messages').select('user_id');
-      const uniqueTickets = new Set(support?.map(s => s.user_id) || []).size;
+      const { count: supportCount } = await supabase.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open');
+      const uniqueTickets = supportCount || 0;
       
       const balance = profiles?.reduce((sum, p) => sum + Number(p.total_balance || 0), 0) || 0;
       setStats({ users: users || 0, balance, transactions: txs || 0, recon: recon || 0, subs: subs || 0, tickets: uniqueTickets });

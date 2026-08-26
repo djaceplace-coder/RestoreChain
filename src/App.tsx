@@ -33,6 +33,8 @@ import Terms from './pages/Terms';
 import Carriers from './pages/Carriers';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
@@ -41,7 +43,7 @@ import OnboardingLayout from './layouts/OnboardingLayout';
 
 function AppContent() {
   const location = useLocation();
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup' || location.pathname === '/forgot-password' || location.pathname === '/reset-password';
   const isAppShell = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/onboarding');
   const hideNavAndFooter = isAuthPage || isAppShell;
 
@@ -79,6 +81,8 @@ function AppContent() {
           {/* Auth Pages */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* User Panel */}
           <Route path="/dashboard/*" element={<DashboardLayout />} />

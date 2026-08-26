@@ -52,9 +52,9 @@ export default function Wallets() {
     
     const { error } = await supabase.from('wallets').insert({
       user_id: user.id,
-      address: newAddress,
-      network: newNetwork,
-      label: newLabel || newNetwork + ' Wallet',
+      address_or_key: newAddress,
+      type: 'Wallet',
+      name: newLabel || newNetwork + ' Wallet',
       status: 'pending',
       balance: 0
     });
@@ -131,11 +131,11 @@ export default function Wallets() {
             <div key={wallet.id} className={`bg-white p-5 rounded-2xl border ${wallet.status === 'pending' ? 'border-orange-200 bg-orange-50/30' : 'border-gray-200'} shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors`}>
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold shrink-0 ${wallet.status === 'pending' ? 'bg-orange-100 text-orange-500' : 'bg-gray-100 text-gray-500'}`}>
-                  {wallet.network.charAt(0)}
+                  {wallet.name ? wallet.name.charAt(0).toUpperCase() : 'W'}
                 </div>
                 <div>
                   <h3 className="font-bold text-brand-dark flex items-center gap-2">
-                    {wallet.label || wallet.network}
+                    {wallet.name}
                     {wallet.status === 'pending' && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-700 uppercase">
                         Pending Admin Resolution
@@ -147,7 +147,7 @@ export default function Wallets() {
                       </span>
                     )}
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1 font-mono">{wallet.address.substring(0,6)}...{wallet.address.substring(wallet.address.length-4)}</p>
+                  <p className="text-xs text-gray-500 mt-1 font-mono">{wallet.address_or_key ? `${wallet.address_or_key.substring(0,6)}...${wallet.address_or_key.substring(wallet.address_or_key.length-4)}` : 'No address'}</p>
                 </div>
               </div>
               

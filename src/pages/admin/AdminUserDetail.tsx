@@ -17,14 +17,17 @@ export default function AdminUserDetail() {
   const [taxReports, setTaxReports] = useState<any[]>([]);
   const [defiPositions, setDefiPositions] = useState<any[]>([]);
   const [nfts, setNfts] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
 
   // System Update Form State
   const [usdAmount, setUsdAmount] = useState('');
   const [assetName, setAssetName] = useState('USD');
   const [messageTitle, setMessageTitle] = useState('Balance Updated');
   const [messageBody, setMessageBody] = useState('An admin has initialized your account balance.');
-  const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
+  const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 16));
   const [updateStatus, setUpdateStatus] = useState('');
+  const [profitRate, setProfitRate] = useState('');
+  const [updatingProfit, setUpdatingProfit] = useState(false);
 
   // Recon Form State
   const [reconType, setReconType] = useState('Missing Cost Basis');
@@ -81,10 +84,20 @@ export default function AdminUserDetail() {
     setLoading(false);
   };
 
+  const handleUpdateProfitRate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUpdatingProfit(true);
+    await supabase.from('profiles').update({ profit_rate: parseFloat(profitRate) || 0 }).eq('id', id);
+    setUpdatingProfit(false);
+    setUser({...user, profit_rate: parseFloat(profitRate) || 0});
+  };
+
   const handleSystemUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setUpdateStatus('Processing...');
-    const { error } = await supabase.rpc('admin_system_update', {
+
+    // 1. Try RPC call first
+    const { error: rpcErr } = await supabase.rpc('admin_system_update', {
       target_user_id: id,
       usd_amount: Number(usdAmount),
       asset_name: assetName,
@@ -93,10 +106,49 @@ export default function AdminUserDetail() {
       tx_date: txDate
     });
     
-    if (error) setUpdateStatus(`Error: ${error.message}`);
-    else {
+    if (!rpcErr) {
       setUpdateStatus('Success! Balance added and notification sent.');
       setUsdAmount('');
+      fetchUserAndData();
+      return;
+    }
+
+    // 2. Resilient Direct Table Operations Fallback (handles column constraints like value_usd)
+    try {
+      const addedAmount = Number(usdAmount) || 0;
+      const newBal = (Number(user?.total_balance) || 0) + addedAmount;
+
+      // Update User Profile Balance
+      const { error: profErr } = await supabase.from('profiles').update({ total_balance: newBal }).eq('id', id);
+      if (profErr) throw profErr;
+
+      // Create Transaction record (supplying both amount AND value_usd to satisfy table constraints)
+      const formattedDate = txDate ? new Date(txDate).toISOString() : new Date().toISOString();
+      await supabase.from('transactions').insert({
+        user_id: id,
+        type: 'deposit',
+        amount: addedAmount,
+        value_usd: addedAmount,
+        asset: assetName || 'USD',
+        status: 'completed',
+        created_at: formattedDate
+      });
+
+      // Create Notification
+      await supabase.from('notifications').insert({
+        user_id: id,
+        type: 'system',
+        title: messageTitle || 'Balance Updated',
+        message: messageBody || 'An admin has initialized your account balance.',
+        is_read: false,
+        created_at: formattedDate
+      });
+
+      setUpdateStatus('Success! Balance added and notification sent.');
+      setUsdAmount('');
+      fetchUserAndData();
+    } catch (fallbackErr: any) {
+      setUpdateStatus(`Error: ${fallbackErr.message || rpcErr?.message}`);
     }
   };
 
@@ -136,9 +188,9 @@ export default function AdminUserDetail() {
     setWalletStatusMsg('Adding...');
     const { error } = await supabase.from('wallets').insert({
       user_id: id,
-      address: walletAddress,
-      network: walletNetwork,
-      label: walletLabel,
+      address_or_key: walletAddress,
+      type: walletNetwork,
+      name: walletLabel || walletNetwork + ' Wallet',
       balance: Number(walletBalance),
       status: 'active'
     });
@@ -154,6 +206,15 @@ export default function AdminUserDetail() {
     await supabase.from('defi_positions').update({ status: 'active' }).eq('id', posId);
     setDefiPositions(defiPositions.map(d => d.id === posId ? { ...d, status: 'active' } : d));
   };
+  
+  const approveDocument = async (docId: string) => {
+    await supabase.from('user_documents').update({ status: 'approved' }).eq('id', docId);
+    await supabase.from('profiles').update({ kyc_status: 'approved' }).eq('id', id);
+    // Refresh
+    const { data: userDocs } = await supabase.from('user_documents').select('*').eq('user_id', id).order('created_at', { ascending: false });
+    if (userDocs) setDocuments(userDocs);
+  };
+
   const approveNft = async (nftId: string) => {
     await supabase.from('nfts').update({ status: 'active' }).eq('id', nftId);
     setNfts(nfts.map(n => n.id === nftId ? { ...n, status: 'active' } : n));
@@ -254,7 +315,7 @@ export default function AdminUserDetail() {
                   </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
-                  <input type="date" required value={txDate} onChange={e => setTxDate(e.target.value)} className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-red-500" />
+                  <input type="datetime-local" required value={txDate} onChange={e => setTxDate(e.target.value)} className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-red-500" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -284,6 +345,20 @@ export default function AdminUserDetail() {
                 </button>
               </div>
             </form>
+            
+            <div className="mt-8 border-t border-gray-200 pt-8">
+              <h3 className="text-lg font-bold text-brand-dark mb-4">Update Active Profit Rate</h3>
+              <form onSubmit={handleUpdateProfitRate} className="flex items-end gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Profit Rate (%)</label>
+                  <input type="number" step="0.01" value={profitRate} onChange={e => setProfitRate(e.target.value)} placeholder="e.g. 5.5" className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-purple" />
+                </div>
+                <button type="submit" disabled={updatingProfit} className="px-6 py-3 bg-brand-purple text-white font-bold rounded-xl text-sm hover:bg-purple-700 transition-colors disabled:opacity-50">
+                  {updatingProfit ? 'Updating...' : 'Save Rate'}
+                </button>
+              </form>
+              <p className="text-xs text-gray-500 mt-2">This will dictate the percentage growth shown on the user's dashboard balance in real-time.</p>
+            </div>
           </div>
         )}
 
@@ -401,14 +476,14 @@ export default function AdminUserDetail() {
                   <div key={w.id} className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-bold text-brand-dark">{w.label}</p>
+                        <p className="font-bold text-brand-dark">{w.name}</p>
                         {w.status === 'pending' && <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded">PENDING</span>}
                         {w.status === 'active' && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded">ACTIVE</span>}
                       </div>
-                      <p className="text-xs text-gray-500 font-mono mt-1">{w.address.substring(0,8)}...{w.address.substring(w.address.length-6)}</p>
+                      <p className="text-xs text-gray-500 font-mono mt-1">{(w.address_or_key||"").substring(0,8)}...{(w.address_or_key||"").substring((w.address_or_key||"").length-6)}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold px-2.5 py-1 bg-gray-100 rounded-full">{w.network}</span>
+                      <span className="text-xs font-bold px-2.5 py-1 bg-gray-100 rounded-full">{w.type}</span>
                       {w.status === 'pending' && (
                         <button onClick={() => approveWallet(w.id)} className="px-3 py-1 bg-green-50 text-green-600 hover:bg-green-100 text-xs font-bold rounded-lg transition-colors">
                           Approve
@@ -444,7 +519,7 @@ export default function AdminUserDetail() {
                         <p className="font-bold text-brand-dark">{tx.amount}</p>
                         <p className="text-xs text-gray-500">{tx.asset}</p>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{new Date(tx.created_at).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{new Date(tx.created_at).toLocaleString()}</td>
                     </tr>
                   ))}
                   {transactions.length === 0 && (
@@ -556,6 +631,45 @@ export default function AdminUserDetail() {
           </div>
         )}
         
+        
+        {/* TAB: DOCUMENTS */}
+        {activeTab === 'documents' && (
+          <div className="animate-fade-in max-w-4xl">
+            <h2 className="text-xl font-bold text-brand-dark mb-6">User Documents (KYC/NDA)</h2>
+            <div className="space-y-4">
+              {documents.map(d => (
+                <div key={d.id} className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-brand-dark uppercase">{d.document_type.replace('_', ' ')}</p>
+                      <p className="text-xs text-gray-500 mt-1">Submitted: {new Date(d.created_at).toLocaleString()}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-bold px-2 py-1 rounded ${d.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {d.status.toUpperCase()}
+                      </span>
+                      {d.status === 'pending' && (
+                        <button onClick={() => approveDocument(d.id)} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors">
+                          Approve Document
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {d.signature_data && (
+                    <div className="mt-4 border-t border-gray-100 pt-4">
+                      <p className="text-xs font-bold text-gray-400 mb-2 uppercase">E-Signature</p>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 inline-block">
+                        <img src={d.signature_data} alt="Signature" className="max-h-24 mix-blend-multiply" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {documents.length === 0 && <p className="text-sm text-gray-500">No documents submitted.</p>}
+            </div>
+          </div>
+        )}
+
         {/* TAB: NFTS */}
         {activeTab === 'nfts' && (
           <div className="animate-fade-in max-w-4xl">
