@@ -60,7 +60,7 @@ export default function Privacy() {
           
           <section>
             <h2 className="text-2xl font-bold text-brand-dark border-b border-gray-100 pb-4 mb-6">3. Data Security Infrastructure</h2>
-            <p>Security is the foundation of RestoreChain. Our infrastructure is designed to protect highly sensitive financial and personal data:</p>
+            <p>Security is the foundation of Tracefield. Our infrastructure is designed to protect highly sensitive financial and personal data:</p>
             <ul className="list-disc pl-6 space-y-2 mt-4 marker:text-brand-purple">
               <li><strong>SOC 2 Type II Compliance:</strong> Our data centers and operational practices undergo regular independent audits.</li>
               <li><strong>Access Controls:</strong> Case data is restricted using principle-of-least-privilege access controls. Only the specific investigators assigned to your case can view the evidence.</li>

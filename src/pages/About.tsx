@@ -4,9 +4,9 @@ export default function About() {
   return (
     <div className="pt-32 pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-screen">
       <div className="max-w-3xl">
-        <h1 className="text-5xl font-display font-bold text-brand-dark mb-6">About RestoreChain</h1>
+        <h1 className="text-5xl font-display font-bold text-brand-dark mb-6">About Tracefield</h1>
         <p className="text-xl text-brand-text-gray mb-10 leading-relaxed">
-          RestoreChain was founded on the belief that digital asset ownership should be secure, recoverable, and transparent. We combine cutting-edge blockchain forensics with legal expertise to help individuals and institutions recover lost funds and secure their digital future.
+          Tracefield was founded on the belief that digital asset ownership should be secure, recoverable, and transparent. We combine cutting-edge blockchain forensics with legal expertise to help individuals and institutions recover lost funds and secure their digital future.
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">

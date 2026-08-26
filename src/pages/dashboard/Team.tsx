@@ -35,7 +35,7 @@ export default function Team() {
         </div>
       </div>
 
-      <h2 className="text-xl font-bold text-brand-dark mb-4">Assigned RestoreChain Pros</h2>
+      <h2 className="text-xl font-bold text-brand-dark mb-4">Assigned Tracefield Pros</h2>
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden">

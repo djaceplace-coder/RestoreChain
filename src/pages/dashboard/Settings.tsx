@@ -185,7 +185,7 @@ export default function Settings() {
               <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <Shield className="text-gray-400 shrink-0 mt-0.5" size={18} />
                 <p className="text-sm text-gray-600">
-                  <strong>Disclaimer:</strong> Changing these settings will immediately trigger a recalculation of your entire tax history. RestoreChain provides software, not legal or tax advice. Consult a tax professional if you are unsure about your local jurisdiction's rules.
+                  <strong>Disclaimer:</strong> Changing these settings will immediately trigger a recalculation of your entire tax history. Tracefield provides software, not legal or tax advice. Consult a tax professional if you are unsure about your local jurisdiction's rules.
                 </p>
               </div>
             </div>

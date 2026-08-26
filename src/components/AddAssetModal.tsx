@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, Wallet, Link2, Copy, CheckCircle, ChevronRight, Download } from 'lucide-react';
 import Modal from './ui/Modal';
 import { COINS } from '../data/coins';
+import CoinLogo from './CoinLogo';
 
 interface AddAssetModalProps {
   isOpen: boolean;
@@ -57,10 +58,10 @@ export default function AddAssetModal({ isOpen, onClose }: AddAssetModalProps) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={view === 'list' ? 'Add Funds & Assets' : `Deposit ${activeCoin?.symbol}`} maxWidth="max-w-2xl">
+    <Modal isOpen={isOpen} onClose={handleClose} title={view === 'list' ? 'Add Portfolios & Funds' : `Deposit ${activeCoin?.symbol}`} maxWidth="max-w-2xl">
       {view === 'list' ? (
         <div className="space-y-4">
-          <p className="text-gray-500 mb-4">Select a cryptocurrency to add to your portfolio or connect a wallet.</p>
+          <p className="text-gray-500 mb-4">Select a cryptocurrency to add to your portfolios or connect a wallet.</p>
           
           <div className="grid grid-cols-2 gap-4 mb-6">
             <button className="flex flex-col items-center justify-center p-6 bg-purple-50 border border-purple-100 rounded-2xl hover:border-brand-purple transition-colors group">
@@ -83,7 +84,7 @@ export default function AddAssetModal({ isOpen, onClose }: AddAssetModalProps) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input 
               type="text" 
-              placeholder="Search 100+ supported coins (e.g. BTC, Ethereum)..." 
+              placeholder="Search 100+ supported portfolio assets (e.g. BTC, Ethereum)..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all"
@@ -99,9 +100,7 @@ export default function AddAssetModal({ isOpen, onClose }: AddAssetModalProps) {
                   className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold text-xs text-gray-600">
-                      {coin.symbol.charAt(0)}
-                    </div>
+                    <CoinLogo symbol={coin.symbol} size="sm" />
                     <div>
                       <p className="font-bold text-brand-dark">{coin.name}</p>
                       <p className="text-xs text-gray-500">{coin.symbol} • {coin.network}</p>
@@ -110,7 +109,7 @@ export default function AddAssetModal({ isOpen, onClose }: AddAssetModalProps) {
                   <ChevronRight size={18} className="text-gray-300" />
                 </button>
               )) : (
-                <div className="p-8 text-center text-gray-500">No coins found matching "{searchTerm}"</div>
+                <div className="p-8 text-center text-gray-500">No portfolio assets found matching "{searchTerm}"</div>
               )}
             </div>
           </div>
@@ -121,9 +120,7 @@ export default function AddAssetModal({ isOpen, onClose }: AddAssetModalProps) {
             <>
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center font-bold text-lg text-brand-dark">
-                    {activeCoin.symbol.charAt(0)}
-                  </div>
+                  <CoinLogo symbol={activeCoin.symbol} size="md" />
                   <div>
                     <h4 className="font-bold text-brand-dark">{activeCoin.name} ({activeCoin.symbol})</h4>
                     <p className="text-xs text-gray-500">Network: <span className="font-bold text-brand-dark">{activeCoin.network}</span></p>

@@ -24,7 +24,7 @@ export default function Navbar() {
             <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl">
               R
             </div>
-            <span className="font-display font-bold text-xl tracking-tight">RestoreChain</span>
+            <span className="font-display font-bold text-xl tracking-tight">Tracefield</span>
           </Link>
 
           {/* Desktop Menu */}
@@ -96,7 +96,7 @@ export default function Navbar() {
                 <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl">
                   R
                 </div>
-                <span className="font-display font-bold text-xl tracking-tight">RestoreChain</span>
+                <span className="font-display font-bold text-xl tracking-tight">Tracefield</span>
               </Link>
               <button onClick={closeMenu} className="p-2 text-gray-500 hover:text-brand-dark rounded-full hover:bg-gray-100 transition-colors">
                 <X size={24} />

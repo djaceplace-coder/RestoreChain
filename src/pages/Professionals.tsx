@@ -102,7 +102,7 @@ export default function Professionals() {
             <h2 className="text-3xl font-display font-bold text-brand-dark text-center mb-12">Trusted by the best</h2>
             <div className="grid md:grid-cols-2 gap-8">
               <div className="bg-white p-8 rounded-3xl border border-gray-200 shadow-sm">
-                <p className="text-brand-text-gray mb-6">"RestoreChain's technical affidavits were the cornerstone of our civil forfeiture action. They translated complex mixer activity into clear evidence for the judge."</p>
+                <p className="text-brand-text-gray mb-6">"Tracefield's technical affidavits were the cornerstone of our civil forfeiture action. They translated complex mixer activity into clear evidence for the judge."</p>
                 <p className="font-bold text-brand-dark">Partner, AmLaw 100 Firm</p>
               </div>
               <div className="bg-white p-8 rounded-3xl border border-gray-200 shadow-sm">
@@ -127,7 +127,7 @@ export default function Professionals() {
       {/* 8. CTA */}
       <section className="py-24 text-center">
         <div className="max-w-3xl mx-auto px-4">
-          <h2 className="text-4xl font-display font-bold text-brand-dark mb-6">Partner with RestoreChain</h2>
+          <h2 className="text-4xl font-display font-bold text-brand-dark mb-6">Partner with Tracefield</h2>
           <Link to="/signup" className="inline-flex items-center gap-2 bg-brand-dark text-white px-10 py-5 rounded-full text-lg font-bold hover:bg-black transition-all">
             Contact Partner Relations <ArrowRight size={20} />
           </Link>

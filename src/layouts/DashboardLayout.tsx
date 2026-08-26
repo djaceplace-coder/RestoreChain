@@ -3,11 +3,13 @@ import { Link, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { 
   X, Menu, Search, Bell, User, LogOut, LayoutDashboard, Wallet, 
   History, Settings, Activity, Shield, Coins, Image, TrendingUp, 
-  BarChart3, Receipt, FileText, Download, Users, HeartPulse, HelpCircle 
+  BarChart3, Receipt, FileText, Download, Users, HeartPulse, HelpCircle,
+  Repeat
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 import Portfolio from '../pages/dashboard/Portfolio';
+import Swap from '../pages/dashboard/Swap';
 import Agreement from '../pages/dashboard/Agreement';
 import Reconciliation from '../pages/dashboard/Reconciliation';
 import Wallets from '../pages/dashboard/Wallets';
@@ -97,7 +99,7 @@ export default function DashboardLayout() {
             <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl shadow-md">
               R
             </div>
-            <span className="font-display font-bold text-xl tracking-tight text-brand-dark">RestoreChain</span>
+            <span className="font-display font-bold text-xl tracking-tight text-brand-dark">Tracefield</span>
           </Link>
           <button 
             onClick={closeMobileMenu}
@@ -115,6 +117,9 @@ export default function DashboardLayout() {
           )}
           <Link to="/dashboard" onClick={closeMobileMenu} className={navLinkClass('/dashboard', true)}>
             <LayoutDashboard size={18} /> Portfolio
+          </Link>
+          <Link to="/dashboard/swap" onClick={closeMobileMenu} className={navLinkClass('/dashboard/swap')}>
+            <Repeat size={18} /> Swap & Trade
           </Link>
           <Link to="/dashboard/reconciliation" onClick={closeMobileMenu} className={navLinkClass('/dashboard/reconciliation')}>
             <Activity size={18} /> Reconciliation
@@ -232,6 +237,7 @@ export default function DashboardLayout() {
         <div className="p-6 lg:p-10 max-w-7xl mx-auto">
           <Routes>
             <Route path="/" element={<Portfolio />} />
+            <Route path="/swap" element={<Swap />} />
             <Route path="/agreement" element={<Agreement />} />
             <Route path="/reconciliation" element={<Reconciliation />} />
             <Route path="/wallets" element={<Wallets />} />

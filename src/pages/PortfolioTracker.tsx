@@ -65,7 +65,7 @@ export default function PortfolioTracker() {
                     <h4 className="font-bold">Secured in Escrow</h4>
                   </div>
                   <div className="text-3xl font-display font-bold text-brand-dark mb-1">$0.00</div>
-                  <p className="text-xs text-brand-text-gray mb-6">Assets frozen and moved to RestoreChain multi-sig custody will appear here pending final payout.</p>
+                  <p className="text-xs text-brand-text-gray mb-6">Assets frozen and moved to Tracefield multi-sig custody will appear here pending final payout.</p>
                   <button disabled className="w-full bg-gray-200 text-gray-400 py-3 rounded-xl font-bold cursor-not-allowed">
                     Withdraw Unavailable
                   </button>

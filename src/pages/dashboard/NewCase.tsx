@@ -160,7 +160,7 @@ export default function NewCase() {
               
               <label className="flex items-start gap-3 cursor-pointer p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
                 <input type="checkbox" required className="mt-1 w-5 h-5 accent-brand-purple" />
-                <span className="text-sm font-medium text-gray-700">I agree to the Terms of Service and authorize RestoreChain to begin initial forensic investigation.</span>
+                <span className="text-sm font-medium text-gray-700">I agree to the Terms of Service and authorize Tracefield to begin initial forensic investigation.</span>
               </label>
 
               <div className="mt-10 flex justify-between">

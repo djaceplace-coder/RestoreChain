@@ -68,7 +68,7 @@ export default function Signup() {
             <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl">
               R
             </div>
-            <span className="font-display font-bold text-xl tracking-tight text-brand-dark">RestoreChain</span>
+            <span className="font-display font-bold text-xl tracking-tight text-brand-dark">Tracefield</span>
           </Link>
           <h1 className="text-3xl font-display font-bold text-brand-dark">Create account</h1>
           <p className="text-brand-text-gray mt-2 text-sm">Join the leading network in digital asset forensics</p>
@@ -186,7 +186,7 @@ export default function Signup() {
 
       {/* Disclaimers outside card */}
       <div className="relative z-10 mt-8 text-center text-xs text-gray-400 max-w-xs mx-auto">
-        When you create a RestoreChain account, you agree to the <Link to="/terms" className="underline hover:text-white transition-colors">Terms</Link> and <Link to="/privacy" className="underline hover:text-white transition-colors">Privacy Policy</Link>.
+        When you create a Tracefield account, you agree to the <Link to="/terms" className="underline hover:text-white transition-colors">Terms</Link> and <Link to="/privacy" className="underline hover:text-white transition-colors">Privacy Policy</Link>.
       </div>
     </div>
   );

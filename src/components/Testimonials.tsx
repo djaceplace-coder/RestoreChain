@@ -5,7 +5,7 @@ export default function Testimonials() {
     {
       name: "Alex M.",
       role: "Exchange Executive",
-      content: "RestoreChain completely removed the headache from incident response. They tracked the exploited funds across multiple chains and had law enforcement packets ready in hours.",
+      content: "Tracefield completely removed the headache from incident response. They tracked the exploited funds across multiple chains and had law enforcement packets ready in hours.",
       rating: 5,
     },
     {
@@ -23,7 +23,7 @@ export default function Testimonials() {
     {
       name: "Emily R.",
       role: "Scam Victim",
-      content: "When I was phished, I was panicked. RestoreChain immediately froze the funds on a centralized exchange before the attackers could withdraw them.",
+      content: "When I was phished, I was panicked. Tracefield immediately froze the funds on a centralized exchange before the attackers could withdraw them.",
       rating: 5,
     },
     {
@@ -35,7 +35,7 @@ export default function Testimonials() {
     {
       name: "Jessica W.",
       role: "Law Firm Partner",
-      content: "We partner with RestoreChain for all our digital asset litigation. Their chain analysis capabilities provide irrefutable evidence for our cases.",
+      content: "We partner with Tracefield for all our digital asset litigation. Their chain analysis capabilities provide irrefutable evidence for our cases.",
       rating: 5,
     }
   ];

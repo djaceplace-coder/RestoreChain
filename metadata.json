@@ -1,6 +1,6 @@
 {
-  "name": "RestoreChain",
-  "description": "RestoreChain provides comprehensive blockchain forensics and digital asset recovery services.",
+  "name": "Tracefield",
+  "description": "Tracefield provides comprehensive blockchain forensics and digital asset recovery services.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

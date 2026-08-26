@@ -43,7 +43,7 @@ export default function Agreement() {
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save('RestoreChain_Agreement.pdf');
+    pdf.save('Tracefield_Agreement.pdf');
   };
 
   const handleSubmit = async () => {
@@ -132,7 +132,7 @@ export default function Agreement() {
               {/* Document Container */}
               <div ref={docRef} className="bg-white mx-auto shadow-md p-6 md:p-10 max-w-[800px] text-sm text-gray-800 font-serif leading-relaxed" style={{ minHeight: '1000px' }}>
                 <div className="text-center mb-10 border-b-2 border-gray-900 pb-6">
-                  <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-widest text-black mb-2">RestoreChain</h1>
+                  <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-widest text-black mb-2">Tracefield</h1>
                   <p className="text-gray-500">MASTER SERVICES AGREEMENT & TERMS OF USE</p>
                 </div>
                 
@@ -140,16 +140,16 @@ export default function Agreement() {
                 <p className="mb-8 font-bold">Client Account: {profile?.email}</p>
 
                 <div className="space-y-6 text-justify">
-                  <p>This Master Services Agreement (this "Agreement") is entered into by and between RestoreChain Inc. ("Company") and the Client listed above, governing the usage of the RestoreChain platform, cryptographic asset recovery services, and secure portfolio management.</p>
+                  <p>This Master Services Agreement (this "Agreement") is entered into by and between Tracefield Inc. ("Company") and the Client listed above, governing the usage of the Tracefield platform, cryptographic asset recovery services, and secure portfolio management.</p>
                   
                   <h4 className="font-bold text-lg mt-6 mb-2">1. Scope of Services & Opportunities</h4>
-                  <p>RestoreChain provides advanced cryptographic tracking, asset recovery, and institutional-grade portfolio management. Clients have the opportunity to access decentralized finance (DeFi) tools, high-yield staking options, and tax-loss harvesting utilities under our secure custodial infrastructure.</p>
+                  <p>Tracefield provides advanced cryptographic tracking, asset recovery, and institutional-grade portfolio management. Clients have the opportunity to access decentralized finance (DeFi) tools, high-yield staking options, and tax-loss harvesting utilities under our secure custodial infrastructure.</p>
                   
                   <h4 className="font-bold text-lg mt-6 mb-2">2. Client Acknowledgements</h4>
-                  <p>The Client agrees that all deposits, withdrawals, and trades are subject to rigorous AML/KYC checks. The Client understands the inherent risks associated with digital assets and holds RestoreChain harmless from losses due to extreme market volatility.</p>
+                  <p>The Client agrees that all deposits, withdrawals, and trades are subject to rigorous AML/KYC checks. The Client understands the inherent risks associated with digital assets and holds Tracefield harmless from losses due to extreme market volatility.</p>
 
                   <h4 className="font-bold text-lg mt-6 mb-2">3. Custodial Agreement</h4>
-                  <p>By signing this document, you authorize RestoreChain to act as a secure custodian for the assets deposited within the platform. Withdrawals require administrative clearance to prevent unauthorized extraction.</p>
+                  <p>By signing this document, you authorize Tracefield to act as a secure custodian for the assets deposited within the platform. Withdrawals require administrative clearance to prevent unauthorized extraction.</p>
                 </div>
 
                 <div className="mt-12 md:mt-20 flex flex-col md:flex-row justify-between items-start md:items-end border-t gap-6 border-gray-200 pt-10">
@@ -158,7 +158,7 @@ export default function Agreement() {
                     <div className="mb-2 italic text-2xl text-blue-900" style={{ fontFamily: "'Brush Script MT', cursive" }}>Mark Glenn</div>
                     <div className="h-px w-full bg-black mb-2"></div>
                     <p className="font-bold">Mark Glenn</p>
-                    <p className="text-xs text-gray-500">Head of Services, RestoreChain</p>
+                    <p className="text-xs text-gray-500">Head of Services, Tracefield</p>
                   </div>
                   <div className="w-full md:w-1/2 md:pl-8">
                     <p className="mb-2 font-bold text-gray-500 text-xs uppercase">Client Signature</p>

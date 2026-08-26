@@ -1,4 +1,4 @@
-const CACHE_NAME = 'restorechain-v1';
+const CACHE_NAME = 'tracefield-v1';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

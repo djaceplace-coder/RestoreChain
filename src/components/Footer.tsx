@@ -14,7 +14,7 @@ export default function Footer() {
               <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl">
                 R
               </div>
-              <span className="font-display font-bold text-xl tracking-tight text-brand-dark">RestoreChain</span>
+              <span className="font-display font-bold text-xl tracking-tight text-brand-dark">Tracefield</span>
             </div>
             <p className="text-brand-text-gray mb-8 max-w-sm">
               The premier digital asset recovery and blockchain forensic security platform.
@@ -64,10 +64,10 @@ export default function Footer() {
 
         <div className="border-t border-gray-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-brand-text-gray">
-            © {new Date().getFullYear()} RestoreChain Ltd. All rights reserved.
+            © {new Date().getFullYear()} Tracefield Ltd. All rights reserved.
           </p>
           <div className="text-sm text-brand-text-gray text-center md:text-left max-w-2xl">
-            Disclaimer: RestoreChain is a private security firm. We do not provide financial or investment advice.
+            Disclaimer: Tracefield is a private security firm. We do not provide financial or investment advice.
           </div>
         </div>
       </div>

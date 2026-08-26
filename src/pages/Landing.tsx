@@ -10,7 +10,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-brand-purple rounded-xl flex items-center justify-center font-bold text-xl">R</div>
-            <span className="font-display font-bold text-xl tracking-tight">RestoreChain</span>
+            <span className="font-display font-bold text-xl tracking-tight">Tracefield</span>
           </div>
           <div className="flex items-center gap-6">
             <Link to="/login" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Log in</Link>

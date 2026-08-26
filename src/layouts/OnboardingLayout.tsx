@@ -29,7 +29,7 @@ export default function OnboardingLayout() {
           <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl shadow-md">
             R
           </div>
-          <span className="font-display font-bold tracking-tight text-brand-dark hidden sm:block">RestoreChain</span>
+          <span className="font-display font-bold tracking-tight text-brand-dark hidden sm:block">Tracefield</span>
         </Link>
         
         <div className="flex items-center gap-2">

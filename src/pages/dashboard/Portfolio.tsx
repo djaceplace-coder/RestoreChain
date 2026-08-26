@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, ShieldCheck, Loader2, Plus, Download, Wallet, ArrowRight, Building, Globe, Copy, Check } from 'lucide-react';
+import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, ShieldCheck, Loader2, Plus, Download, Wallet, ArrowRight, Building, Globe, Copy, Check, Repeat } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AddAssetModal from '../../components/AddAssetModal';
+import CoinLogo from '../../components/CoinLogo';
 import { COINS } from '../../data/coins';
 import { Link } from 'react-router-dom';
 
@@ -14,7 +15,6 @@ export default function Portfolio() {
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'assets'>('overview');
   const [displayedBalance, setDisplayedBalance] = useState(0);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -65,13 +65,20 @@ export default function Portfolio() {
         if (displayedBalance === 0) setDisplayedBalance(Number(profile.total_balance || 0));
       }
 
-      // Fetch assets
-      const { data: userAssets } = await supabase
-        .from('assets')
+      // Fetch portfolios (try portfolios table, fallback to assets table)
+      let { data: userPortfolios, error: pErr } = await supabase
+        .from('portfolios')
         .select('*')
         .eq('user_id', user.id);
         
-      if (userAssets) setAssets(userAssets);
+      if (pErr || !userPortfolios) {
+        const { data: fallbackAssets } = await supabase
+          .from('assets')
+          .select('*')
+          .eq('user_id', user.id);
+        userPortfolios = fallbackAssets || [];
+      }
+      setAssets(userPortfolios);
 
       // Fetch recent txs
       const { data: txs } = await supabase
@@ -119,37 +126,19 @@ export default function Portfolio() {
   if (loading) return <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-brand-purple" size={32} /></div>;
 
   return (
-    <div className="animate-fade-in pb-12">
+    <div className="animate-fade-in pb-12 space-y-8">
       <AddAssetModal isOpen={isAddAssetOpen} onClose={() => setIsAddAssetOpen(false)} />
       {isFundModalOpen && <FundModal onClose={() => setIsFundModalOpen(false)} user={user} />}
       {isWithdrawModalOpen && <WithdrawModal onClose={() => setIsWithdrawModalOpen(false)} user={user} />}
 
-      
       {/* Dynamic Greeting */}
-      <h1 className="text-3xl font-display font-bold text-brand-dark mb-6">{displayGreeting}</h1>
-      
-      {/* Tabs */}
-      <div className="flex items-center gap-6 border-b border-gray-200 mb-8">
-        <button 
-          onClick={() => setActiveTab('overview')}
-          className={`pb-4 text-sm font-bold transition-colors relative ${activeTab === 'overview' ? 'text-brand-purple' : 'text-gray-500 hover:text-gray-700'}`}
-        >
-          Overview
-          {activeTab === 'overview' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-purple rounded-t-full"></div>}
-        </button>
-        <button 
-          onClick={() => setActiveTab('assets')}
-          className={`pb-4 text-sm font-bold transition-colors relative ${activeTab === 'assets' ? 'text-brand-purple' : 'text-gray-500 hover:text-gray-700'}`}
-        >
-          Assets
-          {activeTab === 'assets' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-brand-purple rounded-t-full"></div>}
-        </button>
-      </div>
+      <h1 className="text-3xl font-display font-bold text-brand-dark mb-2">{displayGreeting}</h1>
 
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+      {/* Total Balance Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Total Balance</h1>
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Total Balance</h2>
             <button 
               onClick={() => setShowBalance(!showBalance)}
               className="text-gray-400 hover:text-brand-purple transition-colors"
@@ -161,12 +150,12 @@ export default function Portfolio() {
             </span>
           </div>
           <div className="text-3xl md:text-5xl font-display font-bold text-brand-dark">
-            {showBalance ? `${displayedBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '••••••••'}
+            {showBalance ? `$${displayedBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '••••••••'}
           </div>
           <div className="flex items-center gap-2 mt-2">
             {Number(userProfile?.profit_rate) > 0 ? (
                <span className="flex items-center text-sm font-bold text-green-500">
-                 <ArrowUpRight size={16} /> +${user?.profit_rate}% Active Growth
+                 <ArrowUpRight size={16} /> +{userProfile?.profit_rate}% Active Growth
                </span>
             ) : (
                <span className="flex items-center text-sm font-bold text-green-500">
@@ -176,155 +165,171 @@ export default function Portfolio() {
             <span className="text-sm text-gray-500">Live Updating</span>
           </div>
         </div>
+
+        {/* Mid-sized Swap Button to the right of balance */}
+        <Link 
+          to="/dashboard/swap" 
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-2xl shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0 self-start sm:self-center"
+        >
+          <Repeat size={18} />
+          <span>Swap Assets</span>
+        </Link>
       </div>
       
-      {/* Action Buttons */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <button onClick={() => setIsFundModalOpen(true)} className="p-4 bg-brand-purple text-white rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-purple-700 transition-colors shadow-md group">
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+      {/* Top Action Buttons: Add Funds & Withdraw */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
+        <button onClick={() => setIsFundModalOpen(true)} className="p-4 bg-brand-purple text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-purple-700 transition-colors shadow-md group">
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
             <Plus size={20} />
           </div>
-          <span className="font-bold text-sm text-center">Add Funds</span>
+          <span className="font-bold text-base">Add Funds</span>
         </button>
-        <button onClick={() => setIsWithdrawModalOpen(true)} className="p-4 bg-white border border-gray-200 text-brand-dark rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm group">
-          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+        <button onClick={() => setIsWithdrawModalOpen(true)} className="p-4 bg-white border border-gray-200 text-brand-dark rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-50 transition-colors shadow-sm group">
+          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
             <Download size={20} />
           </div>
-          <span className="font-bold text-sm text-center">Withdraw</span>
-        </button>
-        <button onClick={() => setIsAddAssetOpen(true)} className="p-4 bg-white border border-gray-200 text-brand-dark rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm group">
-          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Wallet size={20} />
-          </div>
-          <span className="font-bold text-sm text-center">Add Asset</span>
+          <span className="font-bold text-base">Withdraw</span>
         </button>
       </div>
 
-      
-      {activeTab === 'overview' ? (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[700px]">
-          <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-lg font-bold font-display text-brand-dark">Supported Crypto Assets</h2>
+      {/* Your Portfolios Section with Add Portfolio button */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-brand-purple/10 flex items-center justify-center text-brand-purple">
+              <Wallet size={20} />
+            </div>
+            <h2 className="text-lg font-bold font-display text-brand-dark">Your Portfolios</h2>
           </div>
-          <div className="flex-1 overflow-y-auto divide-y divide-gray-100 p-2">
-            {COINS.map(coin => (
-              <div key={coin.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors rounded-xl">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-sm text-gray-600">
-                    {coin.symbol.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="font-bold text-brand-dark text-md">{coin.name}</p>
-                    <p className="text-xs text-gray-500">{coin.symbol}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-brand-dark text-md">${coin.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 6})}</p>
-                  <div className={`text-xs font-bold flex items-center justify-end gap-1 ${coin.change24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {coin.change24h >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                    {Math.abs(coin.change24h)}%
-                  </div>
-                </div>
-              </div>
-            ))}
+          <button 
+            onClick={() => setIsAddAssetOpen(true)} 
+            className="px-4 py-2 bg-brand-purple/10 hover:bg-brand-purple/20 text-brand-purple font-bold text-xs rounded-xl flex items-center gap-2 transition-colors"
+          >
+            <Plus size={16} /> Add Portfolio
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          {assets.length === 0 ? ( 
+             <div className="p-10 text-center text-gray-500 flex flex-col items-center justify-center">
+               <Wallet size={40} className="text-gray-300 mb-3" />
+               <p className="text-sm font-medium">No portfolios recorded yet.</p>
+               <button 
+                 onClick={() => setIsAddAssetOpen(true)}
+                 className="mt-3 px-4 py-2 bg-brand-purple text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-colors"
+               >
+                 + Add First Portfolio
+               </button>
+             </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 text-xs text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 font-medium">Portfolio Asset</th>
+                  <th className="px-6 py-4 font-medium text-right">Balance</th>
+                  <th className="px-6 py-4 font-medium text-right">Price</th>
+                  <th className="px-6 py-4 font-medium text-right">Value</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {assets.map((asset) => (
+                  <tr key={asset.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <CoinLogo symbol={asset.symbol} size="md" />
+                        <div>
+                          <p className="font-bold text-brand-dark">{asset.name}</p>
+                          <p className="text-xs text-gray-500">{asset.symbol}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="font-bold text-brand-dark">{asset.balance} {asset.symbol}</p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="font-medium text-brand-dark">${asset.balance > 0 ? (asset.value / asset.balance).toLocaleString('en-US', {minimumFractionDigits: 2}) : '0.00'}</p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="font-bold text-brand-dark">${Number(asset.value || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Transactions (Last 3) */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-lg font-bold font-display text-brand-dark">Recent Transactions</h2>
+          <Link to="/dashboard/transactions" className="text-xs font-bold text-brand-purple hover:underline flex items-center gap-1">
+            View All <ArrowRight size={14} />
+          </Link>
+        </div>
+        <div className="overflow-x-auto">
+          {transactions.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 text-sm">No recent transactions.</div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 text-xs text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 font-medium">Type</th>
+                  <th className="px-6 py-4 font-medium">Amount</th>
+                  <th className="px-6 py-4 font-medium">Asset</th>
+                  <th className="px-6 py-4 font-medium text-right">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {transactions.slice(0, 3).map(tx => (
+                  <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${tx.type === 'deposit' ? 'bg-green-100 text-green-700' : tx.type === 'withdrawal' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {tx.type ? tx.type.toUpperCase() : 'TRANSFER'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-brand-dark">
+                      {Number(tx.amount || 0).toLocaleString(undefined, {style: 'currency', currency: 'USD'})}
+                    </td>
+                    <td className="px-6 py-4 text-gray-500 text-sm">{tx.asset || 'USD'}</td>
+                    <td className="px-6 py-4 text-right text-gray-500 text-sm">{new Date(tx.created_at).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {/* Complete Supported Crypto Portfolios List */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold font-display text-brand-dark">Supported Crypto Portfolios</h2>
+            <p className="text-xs text-gray-500">Live cryptocurrency rates & supported tracking assets</p>
           </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-3 space-y-8">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="text-lg font-bold font-display text-brand-dark">Your Assets</h2>
+        <div className="divide-y divide-gray-100">
+          {COINS.map(coin => (
+            <div key={coin.id} className="p-4 px-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+              <div className="flex items-center gap-4">
+                <CoinLogo symbol={coin.symbol} size="md" />
+                <div>
+                  <p className="font-bold text-brand-dark text-md">{coin.name}</p>
+                  <p className="text-xs text-gray-500 uppercase">{coin.symbol}</p>
+                </div>
               </div>
-              <div className="overflow-x-auto">
-                {assets.length === 0 ? ( 
-                   <div className="p-12 text-center text-gray-500 flex flex-col items-center justify-center">
-                     <Wallet size={48} className="text-gray-300 mb-4" />
-                     <p>No assets found. Click 'Add Asset' to start building your portfolio.</p>
-                   </div>
-                ) : (
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50/50 text-xs text-gray-500 uppercase tracking-wider">
-                        <th className="px-6 py-4 font-medium">Asset</th>
-                        <th className="px-6 py-4 font-medium text-right">Balance</th>
-                        <th className="px-6 py-4 font-medium text-right">Price</th>
-                        <th className="px-6 py-4 font-medium text-right">Value</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {assets.map((asset) => (
-                        <tr key={asset.id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-full ${asset.color || 'bg-blue-500'} flex items-center justify-center text-white font-bold text-xs`}>
-                                {asset.symbol[0]}
-                              </div>
-                              <div>
-                                <p className="font-bold text-brand-dark">{asset.name}</p>
-                                <p className="text-xs text-gray-500">{asset.symbol}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <p className="font-bold text-brand-dark">{asset.balance} {asset.symbol}</p>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <p className="font-medium text-brand-dark">${(asset.value / asset.balance).toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <p className="font-bold text-brand-dark">${asset.value.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-                        </div>
-
-            {/* Recent Transactions */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mt-8">
-              <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="text-lg font-bold font-display text-brand-dark">Recent Transactions</h2>
-              </div>
-              <div className="overflow-x-auto">
-                {transactions.length === 0 ? (
-                  <div className="p-12 text-center text-gray-500">No recent transactions.</div>
-                ) : (
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50/50 text-xs text-gray-500 uppercase tracking-wider">
-                        <th className="px-6 py-4 font-medium">Type</th>
-                        <th className="px-6 py-4 font-medium">Amount</th>
-                        <th className="px-6 py-4 font-medium">Asset</th>
-                        <th className="px-6 py-4 font-medium text-right">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {transactions.slice(0, 3).map(tx => (
-                        <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <span className={`text-xs font-bold px-2 py-1 rounded ${tx.type === 'deposit' ? 'bg-green-100 text-green-700' : tx.type === 'withdrawal' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                              {tx.type ? tx.type.toUpperCase() : 'TRANSFER'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 font-bold text-brand-dark">
-                            {Number(tx.amount).toLocaleString(undefined, {style: 'currency', currency: 'USD'})}
-                          </td>
-                          <td className="px-6 py-4 text-gray-500 text-sm">{tx.asset}</td>
-                          <td className="px-6 py-4 text-right text-gray-500 text-sm">{new Date(tx.created_at).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+              <div className="text-right">
+                <p className="font-bold text-brand-dark text-md">${coin.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 6})}</p>
+                <div className={`text-xs font-bold flex items-center justify-end gap-1 ${coin.change24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {coin.change24h >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                  {Math.abs(coin.change24h)}%
+                </div>
               </div>
             </div>
-
-          </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }

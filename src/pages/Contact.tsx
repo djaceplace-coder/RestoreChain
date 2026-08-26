@@ -11,11 +11,11 @@ export default function Contact() {
           <div className="space-y-6">
             <div>
               <h4 className="font-bold text-brand-dark mb-1">General Inquiries</h4>
-              <p className="text-brand-text-gray">hello@restorechain.co.uk</p>
+              <p className="text-brand-text-gray">info@tracefield.co.uk</p>
             </div>
             <div>
               <h4 className="font-bold text-brand-dark mb-1">Emergency Recovery</h4>
-              <p className="text-brand-text-gray">sos@restorechain.co.uk</p>
+              <p className="text-brand-text-gray">info@tracefield.co.uk</p>
             </div>
             <div>
               <h4 className="font-bold text-brand-dark mb-1">Global HQ</h4>

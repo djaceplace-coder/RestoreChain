@@ -38,7 +38,7 @@ export default function Carriers() {
         <div className="prose prose-lg text-brand-text-gray max-w-none space-y-8 animate-fade-in">
           <section>
             <h2 className="text-2xl font-bold text-brand-dark border-b border-gray-100 pb-4 mb-6">1. SMS Alerts & Consent</h2>
-            <p>By opting into our emergency SMS alert system, you consent to receive text messages regarding active security incidents, case updates, and multi-sig authorization requests from RestoreChain. These messages are critical to the timely recovery and securing of digital assets.</p>
+            <p>By opting into our emergency SMS alert system, you consent to receive text messages regarding active security incidents, case updates, and multi-sig authorization requests from Tracefield. These messages are critical to the timely recovery and securing of digital assets.</p>
           </section>
           
           <section>
@@ -54,7 +54,7 @@ export default function Carriers() {
           
           <section>
             <h2 className="text-2xl font-bold text-brand-dark border-b border-gray-100 pb-4 mb-6">4. Assistance & Support</h2>
-            <p>If you are experiencing issues with the messaging program you can reply with the keyword <strong>HELP</strong> for more assistance, or you can get help directly by contacting our support team at support@restorechain.com or via the secure portal.</p>
+            <p>If you are experiencing issues with the messaging program you can reply with the keyword <strong>HELP</strong> for more assistance, or you can get help directly by contacting our support team at info@tracefield.co.uk or via the secure portal.</p>
           </section>
           
           <section>

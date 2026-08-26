@@ -100,7 +100,7 @@ export default function AdminLayout() {
             <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
               <Shield size={18} />
             </div>
-            <span className="font-display font-bold text-xl tracking-tight text-white">Restore Admin</span>
+            <span className="font-display font-bold text-xl tracking-tight text-white">Tracefield Admin</span>
           </Link>
           <button 
             onClick={closeMobileMenu}

@@ -21,6 +21,7 @@ export default function AdminUserDetail() {
 
   // System Update Form State
   const [usdAmount, setUsdAmount] = useState('');
+  const [tokenQty, setTokenQty] = useState('');
   const [assetName, setAssetName] = useState('USD');
   const [messageTitle, setMessageTitle] = useState('Balance Updated');
   const [messageBody, setMessageBody] = useState('An admin has initialized your account balance.');
@@ -96,6 +97,50 @@ export default function AdminUserDetail() {
     e.preventDefault();
     setUpdateStatus('Processing...');
 
+    const updatePortfolioIfNeeded = async () => {
+      const addedAmount = Number(usdAmount) || 0;
+      const assetSymbol = (assetName || 'USD').toUpperCase();
+      if (!['USD', 'USDT', 'USDC', 'USDTO', 'FUSD'].includes(assetSymbol)) {
+        let { data: existingPortfolios, error: fetchErr } = await supabase
+          .from('portfolios')
+          .select('*')
+          .eq('user_id', id)
+          .eq('symbol', assetSymbol);
+          
+        let existingAsset = existingPortfolios?.[0];
+        let useFallback = false;
+        
+        if (fetchErr || !existingPortfolios) {
+           const { data: fallbackAssets } = await supabase
+            .from('assets')
+            .select('*')
+            .eq('user_id', id)
+            .eq('symbol', assetSymbol);
+           existingAsset = fallbackAssets?.[0];
+           useFallback = true;
+        }
+
+        const tableName = useFallback ? 'assets' : 'portfolios';
+        const qty = Number(tokenQty) || 0;
+
+        if (existingAsset) {
+           await supabase.from(tableName).update({
+             value: Number(existingAsset.value || 0) + addedAmount,
+             balance: Number(existingAsset.balance || 0) + qty
+           }).eq('id', existingAsset.id);
+        } else {
+           await supabase.from(tableName).insert({
+             user_id: id,
+             name: assetName,
+             symbol: assetSymbol,
+             balance: qty,
+             value: addedAmount,
+             color: 'bg-blue-500'
+           });
+        }
+      }
+    };
+
     // 1. Try RPC call first
     const { error: rpcErr } = await supabase.rpc('admin_system_update', {
       target_user_id: id,
@@ -107,8 +152,10 @@ export default function AdminUserDetail() {
     });
     
     if (!rpcErr) {
+      await updatePortfolioIfNeeded();
       setUpdateStatus('Success! Balance added and notification sent.');
       setUsdAmount('');
+      setTokenQty('');
       fetchUserAndData();
       return;
     }
@@ -144,8 +191,12 @@ export default function AdminUserDetail() {
         created_at: formattedDate
       });
 
+      // Manage Portfolios for Crypto Assets
+      await updatePortfolioIfNeeded();
+
       setUpdateStatus('Success! Balance added and notification sent.');
       setUsdAmount('');
+      setTokenQty('');
       fetchUserAndData();
     } catch (fallbackErr: any) {
       setUpdateStatus(`Error: ${fallbackErr.message || rpcErr?.message}`);
@@ -312,7 +363,9 @@ export default function AdminUserDetail() {
                   <input type="number" step="0.01" required value={usdAmount} onChange={e => setUsdAmount(e.target.value)} className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-red-500" placeholder="10000.00" />
                 </div>
                 <div>
-                  </div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Token Quantity (Optional)</label>
+                  <input type="number" step="0.000001" value={tokenQty} onChange={e => setTokenQty(e.target.value)} className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-red-500" placeholder="0.5" />
+                </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">Date</label>
                   <input type="datetime-local" required value={txDate} onChange={e => setTxDate(e.target.value)} className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-red-500" />

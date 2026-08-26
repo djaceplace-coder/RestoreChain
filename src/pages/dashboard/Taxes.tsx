@@ -77,7 +77,7 @@ export default function Taxes() {
       <header className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-brand-dark mb-2">Tax Reports</h1>
-          <p className="text-brand-text-gray">Lodge and download your official RestoreChain tax documentation.</p>
+          <p className="text-brand-text-gray">Lodge and download your official Tracefield tax documentation.</p>
         </div>
         <button 
           onClick={() => setIsLodging(!isLodging)}

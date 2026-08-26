@@ -104,7 +104,7 @@ export default function Pricing() {
               <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 font-bold">2</div>
               <div>
                 <h4 className="font-bold text-brand-dark text-lg">We Absorb All Costs</h4>
-                <p className="text-brand-text-gray text-sm mt-1">Server costs, analyst hours, and legal drafting fees are paid entirely by RestoreChain during the investigation.</p>
+                <p className="text-brand-text-gray text-sm mt-1">Server costs, analyst hours, and legal drafting fees are paid entirely by Tracefield during the investigation.</p>
               </div>
             </div>
             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex gap-4">
@@ -121,14 +121,14 @@ export default function Pricing() {
       {/* 4. Cost Comparison */}
       <section className="py-24">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-display font-bold text-brand-dark text-center mb-12">RestoreChain vs. Traditional Law Firms</h2>
+          <h2 className="text-3xl font-display font-bold text-brand-dark text-center mb-12">Tracefield vs. Traditional Law Firms</h2>
           
           <div className="overflow-hidden rounded-2xl border border-gray-200">
             <table className="w-full text-left bg-white">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="p-6 font-bold text-brand-dark">Feature</th>
-                  <th className="p-6 font-bold text-brand-purple">RestoreChain</th>
+                  <th className="p-6 font-bold text-brand-purple">Tracefield</th>
                   <th className="p-6 font-bold text-gray-500">Traditional Law Firm</th>
                 </tr>
               </thead>

@@ -27,7 +27,7 @@ export default function OnboardingGoals() {
     <div className="p-8 md:p-12 animate-fade-in">
       <div className="text-center mb-10">
         <h2 className="text-3xl font-display font-bold text-brand-dark mb-3">What brings you here?</h2>
-        <p className="text-brand-text-gray text-lg">Select your primary goals so we can personalize your RestoreChain experience.</p>
+        <p className="text-brand-text-gray text-lg">Select your primary goals so we can personalize your Tracefield experience.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">

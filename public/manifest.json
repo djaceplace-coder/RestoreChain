@@ -1,6 +1,6 @@
 {
-  "name": "RestoreChain App",
-  "short_name": "RestoreChain",
+  "name": "Tracefield App",
+  "short_name": "Tracefield",
   "description": "Secure digital asset tracking and portfolio reconciliation.",
   "start_url": "/",
   "display": "standalone",

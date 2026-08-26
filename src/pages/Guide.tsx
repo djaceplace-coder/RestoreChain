@@ -26,7 +26,7 @@ export default function Guide() {
               <li className="flex gap-4"><span className="font-bold text-red-600">1.</span> <span className="text-brand-dark"><strong>Revoke Allowances:</strong> Use Revoke.cash or Etherscan to revoke unlimited token approvals immediately.</span></li>
               <li className="flex gap-4"><span className="font-bold text-red-600">2.</span> <span className="text-brand-dark"><strong>Move Remaining Funds:</strong> Send any uncompromised assets to a brand new hardware wallet or a centralized exchange.</span></li>
               <li className="flex gap-4"><span className="font-bold text-red-600">3.</span> <span className="text-brand-dark"><strong>Do NOT Delete Evidence:</strong> Do not delete browser histories, emails, or telegram chats with the attacker.</span></li>
-              <li className="flex gap-4"><span className="font-bold text-red-600">4.</span> <span className="text-brand-dark"><strong>Contact RestoreChain:</strong> Submit the malicious transaction hash to our triage team to begin tracking.</span></li>
+              <li className="flex gap-4"><span className="font-bold text-red-600">4.</span> <span className="text-brand-dark"><strong>Contact Tracefield:</strong> Submit the malicious transaction hash to our triage team to begin tracking.</span></li>
             </ul>
             <div className="mt-8">
               <Link to="/signup" className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-red-700 transition-colors">Start Emergency Trace</Link>
