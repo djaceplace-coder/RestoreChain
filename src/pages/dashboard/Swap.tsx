@@ -30,8 +30,21 @@ export default function Swap() {
   const [userPortfolios, setUserPortfolios] = useState<any[]>([]);
 
   // Swap State
-  const [payToken, setPayToken] = useState(SWAP_TOKENS[4]); // Default ETH
-  const [receiveToken, setReceiveToken] = useState(SWAP_TOKENS[1]); // Default USDTO
+    const fiatToken = {
+    id: 'fiat',
+    symbol: userProfile?.preferred_currency || 'USD',
+    name: 'Fiat Wallet',
+    price: 1.00,
+    change24h: 0,
+    changeUsd: 0,
+    iconBg: 'bg-green-600',
+    network: 'Bank'
+  };
+  
+  const availableTokens = [fiatToken, ...SWAP_TOKENS];
+  const [payToken, setPayToken] = useState(SWAP_TOKENS[0]); // BTC
+  const [receiveToken, setReceiveToken] = useState(fiatToken); // Default ETH
+  
   
   const [payUsdAmount, setPayUsdAmount] = useState<string>('0');
   const [rateType, setRateType] = useState<'Fixed' | 'Floating'>('Fixed');
@@ -41,6 +54,11 @@ export default function Swap() {
   // Selection Modal State
   const [tokenSelectorMode, setTokenSelectorMode] = useState<'pay' | 'receive' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  useEffect(() => {
+    if (userProfile && receiveToken.id === 'fiat') {
+      setReceiveToken(prev => ({ ...prev, symbol: userProfile.preferred_currency || 'USD' }));
+    }
+  }, [userProfile]);
 
   // Processing & Toast
   const [isSwapping, setIsSwapping] = useState(false);
@@ -161,49 +179,56 @@ export default function Swap() {
         created_at: formattedDate
       });
 
-      // Update Pay portfolio item if present
-      const existingPay = userPortfolios.find(a => a.symbol.toUpperCase() === payToken.symbol.toUpperCase());
-      if (existingPay && existingPay.balance >= payTokenQty) {
-        // Try portfolios table first, fallback to assets
-        const { error: pErr } = await supabase.from('portfolios').update({
-          balance: Math.max(0, existingPay.balance - payTokenQty),
-          value: Math.max(0, existingPay.value - payUsdVal)
-        }).eq('id', existingPay.id);
-
-        if (pErr) {
-          await supabase.from('assets').update({
+            // Deduct Pay Token
+      if (payToken.id === 'fiat') {
+        const currentFiat = Number(userProfile?.fiat_balance || 0);
+        await supabase.from('profiles').update({ fiat_balance: Math.max(0, currentFiat - payTokenQty) }).eq('id', user.id);
+      } else {
+        const existingPay = userPortfolios.find(a => a.symbol.toUpperCase() === payToken.symbol.toUpperCase());
+        if (existingPay && existingPay.balance >= payTokenQty) {
+          const { error: pErr } = await supabase.from('portfolios').update({
             balance: Math.max(0, existingPay.balance - payTokenQty),
             value: Math.max(0, existingPay.value - payUsdVal)
           }).eq('id', existingPay.id);
+          if (pErr) {
+            await supabase.from('assets').update({
+              balance: Math.max(0, existingPay.balance - payTokenQty),
+              value: Math.max(0, existingPay.value - payUsdVal)
+            }).eq('id', existingPay.id);
+          }
         }
       }
 
-      // Add/Update Receive portfolio item
-      const existingReceive = userPortfolios.find(a => a.symbol.toUpperCase() === receiveToken.symbol.toUpperCase());
-      if (existingReceive) {
-        const { error: pErr } = await supabase.from('portfolios').update({
-          balance: (Number(existingReceive.balance) || 0) + receiveTokenQty,
-          value: (Number(existingReceive.value) || 0) + netReceiveUsd
-        }).eq('id', existingReceive.id);
-
-        if (pErr) {
-          await supabase.from('assets').update({
+      // Add Receive Token
+      if (receiveToken.id === 'fiat') {
+        const currentFiat = Number(userProfile?.fiat_balance || 0);
+        await supabase.from('profiles').update({ fiat_balance: currentFiat + receiveTokenQty }).eq('id', user.id);
+      } else {
+        const existingReceive = userPortfolios.find(a => a.symbol.toUpperCase() === receiveToken.symbol.toUpperCase());
+        if (existingReceive) {
+          const { error: pErr } = await supabase.from('portfolios').update({
             balance: (Number(existingReceive.balance) || 0) + receiveTokenQty,
             value: (Number(existingReceive.value) || 0) + netReceiveUsd
           }).eq('id', existingReceive.id);
-        }
-      } else {
-        const portfolioPayload = {
-          user_id: user.id,
-          name: receiveToken.name,
-          symbol: receiveToken.symbol,
-          balance: receiveTokenQty,
-          value: netReceiveUsd,
-          color: receiveToken.iconBg
-        };
-        const { error: pErr } = await supabase.from('portfolios').insert(portfolioPayload);
-        if (pErr) {
-          await supabase.from('assets').insert(portfolioPayload);
+          if (pErr) {
+            await supabase.from('assets').update({
+              balance: (Number(existingReceive.balance) || 0) + receiveTokenQty,
+              value: (Number(existingReceive.value) || 0) + netReceiveUsd
+            }).eq('id', existingReceive.id);
+          }
+        } else {
+          const portfolioPayload = {
+            user_id: user.id,
+            name: receiveToken.name,
+            symbol: receiveToken.symbol,
+            balance: receiveTokenQty,
+            value: netReceiveUsd,
+            color: receiveToken.iconBg
+          };
+          const { error: pErr } = await supabase.from('portfolios').insert(portfolioPayload);
+          if (pErr) {
+            await supabase.from('assets').insert(portfolioPayload);
+          }
         }
       }
 
@@ -235,7 +260,7 @@ export default function Swap() {
     }
   };
 
-  const filteredTokens = SWAP_TOKENS.filter(t => 
+  const filteredTokens = availableTokens.filter(t => 
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     t.symbol.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -484,7 +509,7 @@ export default function Swap() {
             </div>
 
             <div className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {SWAP_TOKENS.map((token) => (
+              {availableTokens.map((token) => (
                 <div 
                   key={token.id}
                   onClick={() => {

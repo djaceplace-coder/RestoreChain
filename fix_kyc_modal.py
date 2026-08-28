@@ -1,4 +1,11 @@
-import React, { useState, useRef } from 'react';
+import os
+import re
+
+path = 'src/components/KYCModal.tsx'
+with open(path, 'r') as f:
+    content = f.read()
+
+new_content = """import React, { useState, useRef } from 'react';
 import { Camera, Upload, X, Shield, CheckCircle2, ChevronRight, FileText, User } from 'lucide-react';
 import Modal from './ui/Modal';
 import { supabase } from '../lib/supabase';
@@ -16,11 +23,7 @@ export default function KYCModal({ isOpen, onClose, user, onSuccess }: KYCModalP
   const [docFile, setDocFile] = useState<string | null>(null);
   const [docBackFile, setDocBackFile] = useState<string | null>(null);
   const [selfieFile, setSelfieFile] = useState<string | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const [address, setAddress] = useState('');
-  const [currency, setCurrency] = useState('USD');
-  const [language, setLanguage] = useState('en');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const needsBack = docType === "driver's license" || docType === "national id";
 
@@ -40,7 +43,7 @@ export default function KYCModal({ isOpen, onClose, user, onSuccess }: KYCModalP
     setIsSubmitting(true);
     
     try {
-            await supabase.from('kyc_documents').insert({
+      await supabase.from('kyc_documents').insert({
         user_id: user.id,
         document_type: docType,
         document_url: docFile,
@@ -49,14 +52,9 @@ export default function KYCModal({ isOpen, onClose, user, onSuccess }: KYCModalP
         status: 'pending'
       });
       
-      await supabase.from('profiles').update({ 
-        kyc_status: 'pending',
-        address: address,
-        preferred_currency: currency,
-        preferred_language: language
-      }).eq('id', user.id);
+      await supabase.from('profiles').update({ kyc_status: 'pending' }).eq('id', user.id);
       
-      setStep(7); // Success step
+      setStep(6); // Success step
     } catch (err) {
       console.error(err);
       alert("Failed to submit KYC. Please try again.");
@@ -227,74 +225,8 @@ export default function KYCModal({ isOpen, onClose, user, onSuccess }: KYCModalP
               <button onClick={() => setStep(needsBack ? 4 : 3)} className="flex-1 px-4 py-3 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors">
                 Back
               </button>
-                            <button 
-                disabled={!selfieFile}
-                onClick={() => setStep(6)} 
-                className="flex-1 px-4 py-3 bg-brand-purple text-white font-bold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center justify-center"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        );
-
-            case 6:
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-bold text-brand-dark mb-1">Address & Preferences</h3>
-              <p className="text-sm text-gray-500">Provide your residential address and app preferences.</p>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Residential Address</label>
-                <input 
-                  type="text" 
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="123 Main St, City, Country" 
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-purple"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Currency</label>
-                  <select 
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-brand-purple"
-                  >
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="CAD">CAD ($)</option>
-                    <option value="AUD">AUD ($)</option>
-                    <option value="NGN">NGN (₦)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Language</label>
-                  <select 
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-brand-purple"
-                  >
-                    <option value="en">English</option>
-                    <option value="es">Español</option>
-                    <option value="fr">Français</option>
-                    <option value="de">Deutsch</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <button onClick={() => setStep(5)} className="flex-1 px-4 py-3 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors">
-                Back
-              </button>
               <button 
-                disabled={!address || isSubmitting}
+                disabled={!selfieFile || isSubmitting}
                 onClick={handleSubmit} 
                 className="flex-1 px-4 py-3 bg-brand-purple text-white font-bold rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center justify-center"
               >
@@ -304,7 +236,7 @@ export default function KYCModal({ isOpen, onClose, user, onSuccess }: KYCModalP
           </div>
         );
 
-      case 7:
+      case 6:
         return (
           <div className="text-center py-6 space-y-4">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -330,3 +262,7 @@ export default function KYCModal({ isOpen, onClose, user, onSuccess }: KYCModalP
     </Modal>
   );
 }
+"""
+
+with open(path, 'w') as f:
+    f.write(new_content)

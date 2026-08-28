@@ -7,7 +7,15 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
+  
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("tracefield_remember_email");
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
   const [message, setMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,11 +27,12 @@ export default function Login() {
     }
     
     // Real Supabase Login Attempt (using password since we disabled email verification)
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+    
     if (rememberMe) {
-      localStorage.setItem("tracefield_remember_me", "true");
+      localStorage.setItem("tracefield_remember_email", email);
     } else {
-      localStorage.setItem("tracefield_remember_me", "false");
+      localStorage.removeItem("tracefield_remember_email");
     }
 
     if (error) {

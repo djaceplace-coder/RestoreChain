@@ -45,12 +45,12 @@ export default function LanguageSwitcher({ isDark = false }) {
     setCurrentLang(langCode);
     setIsOpen(false);
     
-    if (langCode === 'en') {
+        if (langCode === 'en') {
       document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
       document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${window.location.hostname}; path=/;`;
     } else {
-      document.cookie = `googtrans=/en/${langCode}; path=/;`;
-      document.cookie = `googtrans=/en/${langCode}; domain=${window.location.hostname}; path=/;`;
+      document.cookie = `googtrans=/en/${langCode}; path=/; SameSite=None; Secure`;
+      document.cookie = `googtrans=/en/${langCode}; domain=${window.location.hostname}; path=/; SameSite=None; Secure`;
     }
 
     if (updateDb) {

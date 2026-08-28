@@ -65,6 +65,31 @@ export default function Portfolio() {
       setUser(data?.user);
     };
     init();
+    
+    // Fetch real-time cryptocurrency data
+    const fetchLiveRates = async () => {
+      try {
+        const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false');
+        if (res.ok) {
+          const data = await res.json();
+          const formatted = data.map((d: any) => ({
+            id: d.id,
+            symbol: d.symbol.toUpperCase(),
+            name: d.name,
+            price: d.current_price,
+            change24h: d.price_change_percentage_24h,
+            image: d.image
+          }));
+          setLiveRates(formatted);
+        }
+      } catch (err) {
+        console.error("Failed to fetch live rates", err);
+      }
+    };
+    
+    fetchLiveRates();
+    const interval = setInterval(fetchLiveRates, 60000); // refresh every minute
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -144,6 +169,14 @@ export default function Portfolio() {
   return () => clearInterval(interval);
   }, [userProfile]);
 
+    const getCurrencySymbol = (cur: string) => {
+    switch(cur) {
+      case 'EUR': return '€';
+      case 'GBP': return '£';
+      case 'NGN': return '₦';
+      default: return '$';
+    }
+  };
   const greetingName = userProfile?.last_name || userProfile?.first_name || 'User';
   const displayGreeting = userProfile?.last_name ? `Welcome, ${userProfile.last_name}` : `Hello, ${greetingName}`;
 
@@ -176,48 +209,64 @@ export default function Portfolio() {
       {/* Dynamic Greeting */}
       <h1 className="text-3xl font-display font-bold text-brand-dark mb-2">{displayGreeting}</h1>
 
-      {/* Total Balance Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Total Balance</h2>
-            <button 
-              onClick={() => setShowBalance(!showBalance)}
-              className="text-gray-400 hover:text-brand-purple transition-colors"
-            >
+            {/* Dual Balances Header */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Crypto Balance (BTC Equivalent) */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group">
+          <div className="absolute -right-6 -top-6 w-24 h-24 bg-orange-100 rounded-full blur-2xl group-hover:bg-orange-200 transition-colors pointer-events-none"></div>
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              Crypto Balance
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">Live</span>
+            </h2>
+            <button onClick={() => setShowBalance(!showBalance)} className="text-gray-400 hover:text-brand-purple">
               {showBalance ? <Eye size={16} /> : <EyeOff size={16} />}
             </button>
-            <span className="ml-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
-              <ShieldCheck size={12} /> High Confidence
-            </span>
           </div>
-          <div className="text-3xl md:text-5xl font-display font-bold text-brand-dark">
-            {showBalance ? `$${displayedBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '••••••••'}
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            {Number(userProfile?.profit_rate) > 0 ? (
-               <span className="flex items-center text-sm font-bold text-green-500">
-                 <ArrowUpRight size={16} /> +{userProfile?.profit_rate}% Active Growth
-               </span>
-            ) : (
-               <span className="flex items-center text-sm font-bold text-green-500">
-                 <ArrowUpRight size={16} /> $0.00 (0.0%)
-               </span>
-            )}
-            <span className="text-sm text-gray-500">Live Updating</span>
-          </div>
+          
+          {(() => {
+            const btcPrice = liveRates.find(r => r.symbol === 'BTC')?.price || 64000;
+            const cryptoUsdValue = assets.reduce((sum, asset) => {
+              const liveRateData = liveRates.find((r: any) => r.symbol.toUpperCase() === asset.symbol.toUpperCase());
+              const livePrice = liveRateData ? liveRateData.price : (asset.balance > 0 ? (asset.value / asset.balance) : 0);
+              return sum + (livePrice * asset.balance);
+            }, 0);
+            const btcEquivalent = cryptoUsdValue / btcPrice;
+            
+            return (
+              <div className="relative z-10">
+                <div className="text-3xl md:text-4xl font-display font-bold text-brand-dark mb-1">
+                  {showBalance ? `${btcEquivalent.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 })} BTC` : '•••••••• BTC'}
+                </div>
+                <div className="text-sm font-bold text-gray-500 mb-3">
+                  {showBalance ? `≈ $${cryptoUsdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '≈ $••••••••'}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
-        {/* Mid-sized Swap Button to the right of balance */}
-        <Link 
-          to="/dashboard/swap" 
-          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-2xl shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0 self-start sm:self-center"
-        >
-          <Repeat size={18} />
-          <span>Swap Assets</span>
-        </Link>
+        {/* Fiat Balance */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group">
+          <div className="absolute -right-6 -top-6 w-24 h-24 bg-green-100 rounded-full blur-2xl group-hover:bg-green-200 transition-colors pointer-events-none"></div>
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Fiat Balance</h2>
+            <Link to="/dashboard/swap" className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-purple text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-colors shadow-sm">
+              <Repeat size={14} /> Swap
+            </Link>
+          </div>
+          
+          <div className="relative z-10">
+            <div className="text-3xl md:text-4xl font-display font-bold text-brand-dark mb-1">
+              {showBalance ? `${getCurrencySymbol(userProfile?.preferred_currency)}${Number(userProfile?.fiat_balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `•••••••• ${userProfile?.preferred_currency || 'USD'}`}
+            </div>
+            <div className="text-sm font-bold text-gray-500 mb-4 uppercase">
+              {userProfile?.preferred_currency || 'USD'} Wallet
+            </div>
+          </div>
+        </div>
       </div>
-      
+
       {/* Top Action Buttons: Add Funds & Withdraw */}
       <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
         <button onClick={() => handleActionWithKYC(() => setIsFundModalOpen(true))} className="p-4 bg-brand-purple text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-purple-700 transition-colors shadow-md group">
@@ -272,8 +321,13 @@ export default function Portfolio() {
                   <th className="px-6 py-4 font-medium text-right">Value</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {assets.map((asset) => (
+                            <tbody className="divide-y divide-gray-100">
+                {assets.map((asset) => {
+                  const liveRateData = liveRates.find((r: any) => r.symbol.toUpperCase() === asset.symbol.toUpperCase());
+                  const livePrice = liveRateData ? liveRateData.price : (asset.balance > 0 ? (asset.value / asset.balance) : 0);
+                  const liveValue = livePrice * asset.balance;
+                  
+                  return (
                   <tr key={asset.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -288,13 +342,13 @@ export default function Portfolio() {
                       <p className="font-bold text-brand-dark">{asset.balance} {asset.symbol}</p>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <p className="font-medium text-brand-dark">${asset.balance > 0 ? (asset.value / asset.balance).toLocaleString('en-US', {minimumFractionDigits: 2}) : '0.00'}</p>
+                      <p className="font-medium text-brand-dark">${Number(livePrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <p className="font-bold text-brand-dark">${Number(asset.value || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                      <p className="font-bold text-brand-dark">${Number(liveValue || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           )}
@@ -395,21 +449,34 @@ export default function Portfolio() {
                   <th className="px-6 py-4 font-medium text-right">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {transactions.slice(0, 3).map(tx => (
-                  <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
+                            <tbody className="divide-y divide-gray-100">
+                {assets.map((asset) => {
+                  const liveRateData = liveRates.find((r: any) => r.symbol.toUpperCase() === asset.symbol.toUpperCase());
+                  const livePrice = liveRateData ? liveRateData.price : (asset.balance > 0 ? (asset.value / asset.balance) : 0);
+                  const liveValue = livePrice * asset.balance;
+                  
+                  return (
+                  <tr key={asset.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${tx.type === 'deposit' ? 'bg-green-100 text-green-700' : tx.type === 'withdrawal' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {tx.type ? tx.type.toUpperCase() : 'TRANSFER'}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <CoinLogo symbol={asset.symbol} size="md" />
+                        <div>
+                          <p className="font-bold text-brand-dark">{asset.name}</p>
+                          <p className="text-xs text-gray-500">{asset.symbol}</p>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 font-bold text-brand-dark">
-                      {Number(tx.amount || 0).toLocaleString(undefined, {style: 'currency', currency: 'USD'})}
+                    <td className="px-6 py-4 text-right">
+                      <p className="font-bold text-brand-dark">{asset.balance} {asset.symbol}</p>
                     </td>
-                    <td className="px-6 py-4 text-gray-500 text-sm">{tx.asset || 'USD'}</td>
-                    <td className="px-6 py-4 text-right text-gray-500 text-sm">{new Date(tx.created_at).toLocaleString()}</td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="font-medium text-brand-dark">${Number(livePrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <p className="font-bold text-brand-dark">${Number(liveValue || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                    </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           )}
