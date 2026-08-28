@@ -27,7 +27,9 @@ export default function LanguageSwitcher({ isDark = false }) {
     
     // 2. If logged in, check supabase profile and sync
     const syncUserLang = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      if (!supabase) { setCurrentLang(lang); return; }
+      if (!supabase) return;
+       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const { data } = await supabase.from('profiles').select('preferred_language').eq('id', session.user.id).single();
         if (data?.preferred_language && data.preferred_language !== lang) {
@@ -54,6 +56,8 @@ export default function LanguageSwitcher({ isDark = false }) {
     }
 
     if (updateDb) {
+
+      if (!supabase) return;
        const { data: { session } } = await supabase.auth.getSession();
        if (session?.user) {
           await supabase.from('profiles').update({ preferred_language: langCode }).eq('id', session.user.id);
