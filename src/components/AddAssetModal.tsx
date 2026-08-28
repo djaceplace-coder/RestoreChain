@@ -18,12 +18,12 @@ export default function AddAssetModal({ isOpen, onClose }: AddAssetModalProps) {
   const [view, setView] = useState<'list' | 'details'>('list');
 
   const filteredCoins = useMemo(() => {
-    if (!searchTerm) return COINS.slice(0, 20); // show top 20 by default
+    if (!searchTerm) return COINS.slice(0, 60); // show top 20 by default
     const lower = searchTerm.toLowerCase();
     return COINS.filter(c => 
       c.symbol.toLowerCase().includes(lower) || 
       c.name.toLowerCase().includes(lower)
-    ).slice(0, 50);
+    ).slice(0, 60);
   }, [searchTerm]);
 
   const activeCoin = COINS.find(c => c.id === selectedCoin);
@@ -58,7 +58,7 @@ export default function AddAssetModal({ isOpen, onClose }: AddAssetModalProps) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={view === 'list' ? 'Add Portfolios & Funds' : `Deposit ${activeCoin?.symbol}`} maxWidth="max-w-2xl">
+    <Modal isOpen={isOpen} onClose={handleClose} title={view === 'list' ? 'Select Crypto Wallet' : `Deposit ${activeCoin?.symbol}`} maxWidth="max-w-2xl">
       {view === 'list' ? (
         <div className="space-y-4">
           <p className="text-gray-500 mb-4">Select a cryptocurrency to add to your portfolios or connect a wallet.</p>

@@ -10,14 +10,76 @@ interface ConnectWalletModalProps {
 }
 
 const WALLET_PROVIDERS = [
-  { id: 'metamask', name: 'MetaMask', type: 'web3', category: 'Web3 Wallet', icon: '🦊' },
-  { id: 'trustwallet', name: 'Trust Wallet', type: 'web3', category: 'Web3 Wallet', icon: '🛡️' },
-  { id: 'coinbase_wallet', name: 'Coinbase Wallet', type: 'web3', category: 'Web3 Wallet', icon: '🔵' },
-  { id: 'binance', name: 'Binance', type: 'exchange', category: 'Exchange', icon: '🟨' },
-  { id: 'coinbase', name: 'Coinbase', type: 'exchange', category: 'Exchange', icon: '📈' },
-  { id: 'kraken', name: 'Kraken', type: 'exchange', category: 'Exchange', icon: '🦑' },
-  { id: 'ledger', name: 'Ledger', type: 'hardware', category: 'Hardware Wallet', icon: '🔐' },
-  { id: 'trezor', name: 'Trezor', type: 'hardware', category: 'Hardware Wallet', icon: '🔒' },
+  { id: 'binance', name: 'Binance', type: 'exchange', category: 'Exchange', bgColor: 'bg-pink-600', text: 'B', textColor: 'text-white' },
+  { id: 'coinbase', name: 'Coinbase', type: 'exchange', category: 'Exchange', bgColor: 'bg-blue-600', text: 'C', textColor: 'text-white' },
+  { id: 'kraken', name: 'Kraken', type: 'exchange', category: 'Exchange', bgColor: 'bg-gray-800', text: 'K', textColor: 'text-white' },
+  { id: 'kucoin', name: 'KuCoin', type: 'exchange', category: 'Exchange', bgColor: 'bg-teal-600', text: 'K', textColor: 'text-white' },
+  { id: 'bybit', name: 'Bybit', type: 'exchange', category: 'Exchange', bgColor: 'bg-blue-600', text: 'B', textColor: 'text-white' },
+  { id: 'okx', name: 'OKX', type: 'exchange', category: 'Exchange', bgColor: 'bg-indigo-600', text: 'O', textColor: 'text-white' },
+  { id: 'bitfinex', name: 'Bitfinex', type: 'exchange', category: 'Exchange', bgColor: 'bg-red-600', text: 'B', textColor: 'text-white' },
+  { id: 'huobi', name: 'Huobi', type: 'exchange', category: 'Exchange', bgColor: 'bg-pink-600', text: 'H', textColor: 'text-white' },
+  { id: 'gateio', name: 'Gate.io', type: 'exchange', category: 'Exchange', bgColor: 'bg-blue-600', text: 'G', textColor: 'text-white' },
+  { id: 'mexc', name: 'MEXC', type: 'exchange', category: 'Exchange', bgColor: 'bg-yellow-500', text: 'M', textColor: 'text-white' },
+  { id: 'bitget', name: 'Bitget', type: 'exchange', category: 'Exchange', bgColor: 'bg-yellow-500', text: 'B', textColor: 'text-white' },
+  { id: 'cryptocom', name: 'Crypto.com', type: 'exchange', category: 'Exchange', bgColor: 'bg-yellow-500', text: 'C', textColor: 'text-white' },
+  { id: 'bitstamp', name: 'Bitstamp', type: 'exchange', category: 'Exchange', bgColor: 'bg-indigo-600', text: 'B', textColor: 'text-white' },
+  { id: 'bithumb', name: 'Bithumb', type: 'exchange', category: 'Exchange', bgColor: 'bg-pink-600', text: 'B', textColor: 'text-white' },
+  { id: 'upbit', name: 'Upbit', type: 'exchange', category: 'Exchange', bgColor: 'bg-yellow-500', text: 'U', textColor: 'text-white' },
+  { id: 'gemini', name: 'Gemini', type: 'exchange', category: 'Exchange', bgColor: 'bg-indigo-600', text: 'G', textColor: 'text-white' },
+  { id: 'htx', name: 'HTX', type: 'exchange', category: 'Exchange', bgColor: 'bg-pink-600', text: 'H', textColor: 'text-white' },
+  { id: 'pionex', name: 'Pionex', type: 'exchange', category: 'Exchange', bgColor: 'bg-teal-600', text: 'P', textColor: 'text-white' },
+  { id: 'bingx', name: 'BingX', type: 'exchange', category: 'Exchange', bgColor: 'bg-teal-600', text: 'B', textColor: 'text-white' },
+  { id: 'lbank', name: 'LBank', type: 'exchange', category: 'Exchange', bgColor: 'bg-teal-600', text: 'L', textColor: 'text-white' },
+  { id: 'whitebit', name: 'WhiteBIT', type: 'exchange', category: 'Exchange', bgColor: 'bg-red-600', text: 'W', textColor: 'text-white' },
+  { id: 'xtcom', name: 'XT.COM', type: 'exchange', category: 'Exchange', bgColor: 'bg-red-600', text: 'X', textColor: 'text-white' },
+  { id: 'coinex', name: 'CoinEx', type: 'exchange', category: 'Exchange', bgColor: 'bg-pink-600', text: 'C', textColor: 'text-white' },
+  { id: 'bitrue', name: 'Bitrue', type: 'exchange', category: 'Exchange', bgColor: 'bg-green-600', text: 'B', textColor: 'text-white' },
+  { id: 'probit', name: 'ProBit', type: 'exchange', category: 'Exchange', bgColor: 'bg-red-600', text: 'P', textColor: 'text-white' },
+  { id: 'poloniex', name: 'Poloniex', type: 'exchange', category: 'Exchange', bgColor: 'bg-red-600', text: 'P', textColor: 'text-white' },
+  { id: 'phemex', name: 'Phemex', type: 'exchange', category: 'Exchange', bgColor: 'bg-green-600', text: 'P', textColor: 'text-white' },
+  { id: 'ascendex', name: 'AscendEX', type: 'exchange', category: 'Exchange', bgColor: 'bg-red-600', text: 'A', textColor: 'text-white' },
+  { id: 'bitmart', name: 'BitMart', type: 'exchange', category: 'Exchange', bgColor: 'bg-purple-600', text: 'B', textColor: 'text-white' },
+  { id: 'digifinex', name: 'DigiFinex', type: 'exchange', category: 'Exchange', bgColor: 'bg-purple-600', text: 'D', textColor: 'text-white' },
+  { id: 'metamask', name: 'MetaMask', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-indigo-600', text: 'M', textColor: 'text-white' },
+  { id: 'trustwallet', name: 'Trust Wallet', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-red-600', text: 'T', textColor: 'text-white' },
+  { id: 'phantom', name: 'Phantom', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-teal-600', text: 'P', textColor: 'text-white' },
+  { id: 'coinbasewallet', name: 'Coinbase Wallet', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-yellow-500', text: 'C', textColor: 'text-white' },
+  { id: 'exodus', name: 'Exodus', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-red-600', text: 'E', textColor: 'text-white' },
+  { id: 'rainbow', name: 'Rainbow', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-yellow-500', text: 'R', textColor: 'text-white' },
+  { id: 'zerion', name: 'Zerion', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-blue-600', text: 'Z', textColor: 'text-white' },
+  { id: 'argent', name: 'Argent', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-gray-800', text: 'A', textColor: 'text-white' },
+  { id: 'safepal', name: 'SafePal', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-red-600', text: 'S', textColor: 'text-white' },
+  { id: 'inchwallet', name: '1inch Wallet', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-teal-600', text: '1', textColor: 'text-white' },
+  { id: 'mathwallet', name: 'Math Wallet', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-red-600', text: 'M', textColor: 'text-white' },
+  { id: 'tokenpocket', name: 'TokenPocket', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-blue-600', text: 'T', textColor: 'text-white' },
+  { id: 'bitkeep', name: 'BitKeep', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-pink-600', text: 'B', textColor: 'text-white' },
+  { id: 'bravewallet', name: 'Brave Wallet', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-pink-600', text: 'B', textColor: 'text-white' },
+  { id: 'core', name: 'Core', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-pink-600', text: 'C', textColor: 'text-white' },
+  { id: 'kukai', name: 'Kukai', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-blue-600', text: 'K', textColor: 'text-white' },
+  { id: 'keplr', name: 'Keplr', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-gray-800', text: 'K', textColor: 'text-white' },
+  { id: 'leap', name: 'Leap', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-gray-800', text: 'L', textColor: 'text-white' },
+  { id: 'martian', name: 'Martian', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-purple-600', text: 'M', textColor: 'text-white' },
+  { id: 'petra', name: 'Petra', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-gray-800', text: 'P', textColor: 'text-white' },
+  { id: 'suiwallet', name: 'Sui Wallet', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-yellow-500', text: 'S', textColor: 'text-white' },
+  { id: 'tonkeeper', name: 'Tonkeeper', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-blue-600', text: 'T', textColor: 'text-white' },
+  { id: 'myetherwallet', name: 'MyEtherWallet', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-pink-600', text: 'M', textColor: 'text-white' },
+  { id: 'guarda', name: 'Guarda', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-pink-600', text: 'G', textColor: 'text-white' },
+  { id: 'atomicwallet', name: 'Atomic Wallet', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-purple-600', text: 'A', textColor: 'text-white' },
+  { id: 'zengo', name: 'Zengo', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-yellow-500', text: 'Z', textColor: 'text-white' },
+  { id: 'enjinwallet', name: 'Enjin Wallet', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-blue-600', text: 'E', textColor: 'text-white' },
+  { id: 'alphawallet', name: 'AlphaWallet', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-gray-800', text: 'A', textColor: 'text-white' },
+  { id: 'imtoken', name: 'imToken', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-blue-600', text: 'i', textColor: 'text-white' },
+  { id: 'spot', name: 'Spot', type: 'web3', category: 'Web3 Wallet', bgColor: 'bg-green-600', text: 'S', textColor: 'text-white' },
+  { id: 'ledger', name: 'Ledger', type: 'hardware', category: 'Hardware Wallet', bgColor: 'bg-yellow-500', text: 'L', textColor: 'text-white' },
+  { id: 'trezor', name: 'Trezor', type: 'hardware', category: 'Hardware Wallet', bgColor: 'bg-purple-600', text: 'T', textColor: 'text-white' },
+  { id: 'keepkey', name: 'KeepKey', type: 'hardware', category: 'Hardware Wallet', bgColor: 'bg-gray-800', text: 'K', textColor: 'text-white' },
+  { id: 'ellipal', name: 'Ellipal', type: 'hardware', category: 'Hardware Wallet', bgColor: 'bg-yellow-500', text: 'E', textColor: 'text-white' },
+  { id: 'secux', name: 'SecuX', type: 'hardware', category: 'Hardware Wallet', bgColor: 'bg-green-600', text: 'S', textColor: 'text-white' },
+  { id: 'dcent', name: "D'CENT", type: 'hardware', category: 'Hardware Wallet', bgColor: 'bg-teal-600', text: 'D', textColor: 'text-white' },
+  { id: 'bitbox', name: 'BitBox', type: 'hardware', category: 'Hardware Wallet', bgColor: 'bg-pink-600', text: 'B', textColor: 'text-white' },
+  { id: 'keystone', name: 'Keystone', type: 'hardware', category: 'Hardware Wallet', bgColor: 'bg-green-600', text: 'K', textColor: 'text-white' },
+  { id: 'coldcard', name: 'Coldcard', type: 'hardware', category: 'Hardware Wallet', bgColor: 'bg-purple-600', text: 'C', textColor: 'text-white' },
+  { id: 'tangem', name: 'Tangem', type: 'hardware', category: 'Hardware Wallet', bgColor: 'bg-purple-600', text: 'T', textColor: 'text-white' }
 ];
 
 export default function ConnectWalletModal({ isOpen, onClose, onSuccess }: ConnectWalletModalProps) {
@@ -79,6 +141,14 @@ export default function ConnectWalletModal({ isOpen, onClose, onSuccess }: Conne
       {step === 'select' && (
         <div className="space-y-4">
           <p className="text-gray-500 text-sm">Securely connect your wallets or exchanges to sync your portfolio balances and transaction history. Tracefield only requests read-only access.</p>
+          <div className="bg-brand-purple/5 border border-brand-purple/10 rounded-xl p-3 flex items-center gap-3">
+             <div className="flex -space-x-2">
+                <div className="w-8 h-8 rounded-full bg-[#F6851B] border-2 border-white flex items-center justify-center text-white text-xs font-bold shadow-sm">M</div>
+                <div className="w-8 h-8 rounded-full bg-[#3375BB] border-2 border-white flex items-center justify-center text-white text-xs font-bold shadow-sm">T</div>
+                <div className="w-8 h-8 rounded-full bg-[#F3BA2F] border-2 border-white flex items-center justify-center text-black text-xs font-bold shadow-sm">B</div>
+             </div>
+             <p className="text-xs font-medium text-brand-dark">Over <span className="font-bold text-brand-purple">300+</span> Web3 wallets & exchanges supported natively.</p>
+          </div>
           
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -99,8 +169,8 @@ export default function ConnectWalletModal({ isOpen, onClose, onSuccess }: Conne
                 className="w-full flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:border-brand-purple hover:shadow-md transition-all group"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-xl shadow-sm border border-gray-100">
-                    {provider.icon}
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl font-bold shadow-md ${provider.bgColor} ${provider.textColor || 'text-white'}`}>
+                    {provider.text}
                   </div>
                   <div className="text-left">
                     <h4 className="font-bold text-brand-dark group-hover:text-brand-purple transition-colors">{provider.name}</h4>

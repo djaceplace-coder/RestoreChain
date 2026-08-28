@@ -1,8 +1,27 @@
-import React, { useState } from 'react';
-import { User, Receipt, CreditCard, Bell, Shield, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
+
+import { User, Receipt, CreditCard, Bell, Shield, Info, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import KYCModal from '../../components/KYCModal';
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState('tax-elections');
+  const [activeTab, setActiveTab] = useState('account');
+  const [profile, setProfile] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isKYCModalOpen, setIsKYCModalOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setCurrentUser(session.user);
+        const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        if (data) setProfile(data);
+      }
+    };
+    fetchUser();
+  }, []);
+
 
   return (
     <div className="animate-fade-in max-w-5xl">
@@ -57,6 +76,39 @@ export default function Settings() {
             <button className="px-6 py-3 bg-brand-dark text-white font-bold rounded-xl hover:bg-black transition-colors">
               Save Changes
             </button>
+
+            <div className="pt-8 border-t border-gray-100">
+              <h2 className="text-xl font-bold text-brand-dark mb-4">Identity Verification (KYC)</h2>
+              <div className={`p-5 rounded-2xl border ${profile?.kyc_status === 'approved' ? 'bg-green-50 border-green-100' : profile?.kyc_status === 'pending' ? 'bg-yellow-50 border-yellow-100' : profile?.kyc_status === 'rejected' ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'} flex items-center justify-between`}>
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${profile?.kyc_status === 'approved' ? 'bg-green-100 text-green-600' : profile?.kyc_status === 'pending' ? 'bg-yellow-100 text-yellow-600' : profile?.kyc_status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
+                    {profile?.kyc_status === 'approved' ? <CheckCircle2 size={24} /> : <ShieldAlert size={24} />}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 capitalize">{profile?.kyc_status || 'unverified'}</h3>
+                    <p className="text-sm text-gray-600">
+                      {profile?.kyc_status === 'approved' ? 'Your identity has been verified. You have full access.' : 
+                       profile?.kyc_status === 'pending' ? 'Your documents are under review by admin.' : 
+                       profile?.kyc_status === 'rejected' ? 'Your verification was rejected. Please try again.' :
+                       'Complete KYC to access all platform features.'}
+                    </p>
+                  </div>
+                </div>
+                {profile?.kyc_status !== 'approved' && profile?.kyc_status !== 'pending' && (
+                  <button onClick={() => setIsKYCModalOpen(true)} className="px-4 py-2 bg-brand-purple text-white font-bold rounded-xl text-sm hover:bg-purple-700 transition-colors">
+                    Start Verification
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            <KYCModal 
+              isOpen={isKYCModalOpen} 
+              onClose={() => setIsKYCModalOpen(false)} 
+              user={currentUser} 
+              onSuccess={() => setProfile({...profile, kyc_status: 'pending'})} 
+            />
+
           </div>
         )}
 

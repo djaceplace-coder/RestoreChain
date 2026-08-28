@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, ShieldCheck, Loader2, Plus, Download, Wallet, ArrowRight, Building, Globe, Copy, Check, Repeat } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AddAssetModal from '../../components/AddAssetModal';
+import KYCRestrictedModal from '../../components/KYCRestrictedModal';
+import KYCModal from '../../components/KYCModal';
 import ConnectWalletModal from "../../components/ConnectWalletModal";
 import CoinLogo from '../../components/CoinLogo';
 import { COINS } from '../../data/coins';
@@ -26,7 +28,9 @@ export default function Portfolio() {
       setDeferredPrompt(e);
     };
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+  
+
+  return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
   }, []);
 
   const handleInstallClick = async () => {
@@ -40,9 +44,20 @@ export default function Portfolio() {
   };
 
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
+  const [isKYCRestrictedOpen, setIsKYCRestrictedOpen] = useState(false);
+  const [isKYCModalOpen, setIsKYCModalOpen] = useState(false);
+
+  const handleActionWithKYC = (action: () => void) => {
+    if (userProfile?.kyc_status === 'approved') {
+      action();
+    } else {
+      setIsKYCRestrictedOpen(true);
+    }
+  };
   const [isConnectWalletOpen, setIsConnectWalletOpen] = useState(false);
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [liveRates, setLiveRates] = useState<any[]>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -105,7 +120,9 @@ export default function Portfolio() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` }, fetchData)
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+  
+
+  return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   
@@ -122,7 +139,9 @@ export default function Portfolio() {
       });
     }, 2000);
 
-    return () => clearInterval(interval);
+  
+
+  return () => clearInterval(interval);
   }, [userProfile]);
 
   const greetingName = userProfile?.last_name || userProfile?.first_name || 'User';
@@ -130,8 +149,26 @@ export default function Portfolio() {
 
   if (loading) return <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-brand-purple" size={32} /></div>;
 
+
+
   return (
     <div className="animate-fade-in pb-12 space-y-8">
+            <KYCRestrictedModal 
+        isOpen={isKYCRestrictedOpen} 
+        onClose={() => setIsKYCRestrictedOpen(false)} 
+        onOpenKYC={() => setIsKYCModalOpen(true)}
+      />
+      <KYCModal
+        isOpen={isKYCModalOpen}
+        onClose={() => setIsKYCModalOpen(false)}
+        user={user}
+        onSuccess={() => {
+           if (userProfile) {
+             setUserProfile({...userProfile, kyc_status: 'pending'});
+           }
+        }}
+      />
+      <AddAssetModal isOpen={isAddAssetOpen} onClose={() => setIsAddAssetOpen(false)} />
       <ConnectWalletModal isOpen={isConnectWalletOpen} onClose={() => setIsConnectWalletOpen(false)} onSuccess={() => window.location.reload()} />
       {isFundModalOpen && <FundModal onClose={() => setIsFundModalOpen(false)} user={user} />}
       {isWithdrawModalOpen && <WithdrawModal onClose={() => setIsWithdrawModalOpen(false)} user={user} />}
@@ -183,13 +220,13 @@ export default function Portfolio() {
       
       {/* Top Action Buttons: Add Funds & Withdraw */}
       <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
-        <button onClick={() => setIsFundModalOpen(true)} className="p-4 bg-brand-purple text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-purple-700 transition-colors shadow-md group">
+        <button onClick={() => handleActionWithKYC(() => setIsFundModalOpen(true))} className="p-4 bg-brand-purple text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-purple-700 transition-colors shadow-md group">
           <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
             <Plus size={20} />
           </div>
           <span className="font-bold text-base">Add Funds</span>
         </button>
-        <button onClick={() => setIsWithdrawModalOpen(true)} className="p-4 bg-white border border-gray-200 text-brand-dark rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-50 transition-colors shadow-sm group">
+        <button onClick={() => handleActionWithKYC(() => setIsWithdrawModalOpen(true))} className="p-4 bg-white border border-gray-200 text-brand-dark rounded-2xl flex items-center justify-center gap-3 hover:bg-gray-50 transition-colors shadow-sm group">
           <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">
             <Download size={20} />
           </div>
@@ -207,7 +244,7 @@ export default function Portfolio() {
             <h2 className="text-lg font-bold font-display text-brand-dark">Your Portfolios</h2>
           </div>
           <button 
-            onClick={() => setIsConnectWalletOpen(true)} 
+            onClick={() => handleActionWithKYC(() => setIsAddAssetOpen(true))} 
             className="px-4 py-2 bg-brand-purple/10 hover:bg-brand-purple/20 text-brand-purple font-bold text-xs rounded-xl flex items-center gap-2 transition-colors"
           >
             <Plus size={16} /> Connect Wallet
@@ -219,7 +256,7 @@ export default function Portfolio() {
                <Wallet size={40} className="text-gray-300 mb-3" />
                <p className="text-sm font-medium">No portfolios recorded yet.</p>
                <button 
-                 onClick={() => setIsConnectWalletOpen(true)}
+                 onClick={() => handleActionWithKYC(() => setIsAddAssetOpen(true))}
                  className="mt-3 px-4 py-2 bg-brand-purple text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-colors"
                >
                  + Connect First Wallet
@@ -274,7 +311,7 @@ export default function Portfolio() {
             <h2 className="text-lg font-bold font-display text-brand-dark">Connected Web3 & Exchanges</h2>
           </div>
           <button 
-            onClick={() => setIsConnectWalletOpen(true)} 
+            onClick={() => handleActionWithKYC(() => setIsConnectWalletOpen(true))} 
             className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xs rounded-xl flex items-center gap-2 transition-colors"
           >
             <Plus size={16} /> New Connection
@@ -285,7 +322,7 @@ export default function Portfolio() {
              <div className="p-8 text-center text-gray-400 flex flex-col items-center justify-center">
                <Globe size={40} className="text-gray-300 mb-3" />
                <p className="text-sm font-medium">No external wallets or exchanges connected.</p>
-               <button onClick={() => setIsConnectWalletOpen(true)} className="mt-3 px-4 py-2 bg-brand-dark text-white text-xs font-bold rounded-xl hover:bg-black transition-colors">
+               <button onClick={() => handleActionWithKYC(() => setIsConnectWalletOpen(true))} className="mt-3 px-4 py-2 bg-brand-dark text-white text-xs font-bold rounded-xl hover:bg-black transition-colors">
                  Securely Connect Account
                </button>
              </div>
@@ -294,8 +331,26 @@ export default function Portfolio() {
               {wallets.map(w => (
                 <div key={w.id} className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-2xl shadow-sm">
-                      {w.wallet_provider === 'metamask' ? '🦊' : w.wallet_provider === 'binance' ? '🟨' : w.wallet_provider === 'ledger' ? '🔐' : '🛡️'}
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl font-bold shadow-md text-white ${
+                      w.wallet_provider === 'metamask' ? 'bg-[#F6851B]' : 
+                      w.wallet_provider === 'trustwallet' ? 'bg-[#3375BB]' : 
+                      w.wallet_provider === 'binance' ? 'bg-[#F3BA2F] !text-black' : 
+                      w.wallet_provider === 'bybit' ? 'bg-[#121118] !text-[#F7A600]' : 
+                      w.wallet_provider === 'coinbase' ? 'bg-[#0052FF]' : 
+                      w.wallet_provider === 'kraken' ? 'bg-[#5741D9]' : 
+                      w.wallet_provider === 'okx' ? 'bg-black' : 
+                      w.wallet_provider === 'trezor' ? 'bg-[#0F172A]' : 
+                      'bg-gray-900'
+                    }`}>
+                      {w.wallet_provider === 'metamask' ? 'M' : 
+                       w.wallet_provider === 'trustwallet' ? 'T' : 
+                       w.wallet_provider === 'binance' ? 'B' : 
+                       w.wallet_provider === 'bybit' ? 'B' : 
+                       w.wallet_provider === 'coinbase' ? 'C' : 
+                       w.wallet_provider === 'kraken' ? 'K' : 
+                       w.wallet_provider === 'okx' ? 'O' : 
+                       w.wallet_provider === 'trezor' ? 'T' : 
+                       'L'}
                     </div>
                     <div>
                       <h4 className="font-bold text-brand-dark capitalize">{w.wallet_provider.replace('_', ' ')}</h4>
@@ -370,20 +425,20 @@ export default function Portfolio() {
           </div>
         </div>
         <div className="divide-y divide-gray-100">
-          {COINS.map(coin => (
+          {(liveRates.length > 0 ? liveRates : COINS.slice(0, 60)).map((coin: any) => (
             <div key={coin.id} className="p-4 px-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
               <div className="flex items-center gap-4">
-                <CoinLogo symbol={coin.symbol} size="md" />
+                {coin.image ? <img src={coin.image} alt={coin.name} className="w-10 h-10 rounded-full" /> : <CoinLogo symbol={coin.symbol} size="md" />}
                 <div>
                   <p className="font-bold text-brand-dark text-md">{coin.name}</p>
                   <p className="text-xs text-gray-500 uppercase">{coin.symbol}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-bold text-brand-dark text-md">${coin.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 6})}</p>
-                <div className={`text-xs font-bold flex items-center justify-end gap-1 ${coin.change24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {coin.change24h >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                  {Math.abs(coin.change24h)}%
+                <p className="font-bold text-brand-dark text-md">${Number(coin.current_price ?? coin.price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 6})}</p>
+                <div className={`text-xs font-bold flex items-center justify-end gap-1 ${(coin.price_change_percentage_24h ?? coin.change24h) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {(coin.price_change_percentage_24h ?? coin.change24h) >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                  {Math.abs(coin.price_change_percentage_24h ?? coin.change24h).toFixed(2)}%
                 </div>
               </div>
             </div>
@@ -406,6 +461,8 @@ function FundModal({ onClose, user }: { onClose: () => void, user: any }) {
     setSubmitted(true);
     setTimeout(onClose, 3000);
   };
+
+
 
   return (
     <div className="fixed inset-0 bg-brand-dark/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -461,6 +518,8 @@ function WithdrawModal({ onClose, user }: { onClose: () => void, user: any }) {
     setSubmitted(true);
     setTimeout(onClose, 3000);
   };
+
+
 
   return (
     <div className="fixed inset-0 bg-brand-dark/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">

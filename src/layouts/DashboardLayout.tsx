@@ -27,6 +27,8 @@ import Notifications from '../pages/dashboard/Notifications';
 import Support from '../pages/dashboard/Support';
 import AccountHealth from '../pages/dashboard/AccountHealth';
 import SettingsPage from '../pages/dashboard/Settings';
+import KYCModal from '../components/KYCModal';
+import { AlertCircle } from 'lucide-react';
 
 export default function DashboardLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -37,6 +39,8 @@ export default function DashboardLayout() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [kycStatus, setKycStatus] = useState('pending');
   const [reconCount, setReconCount] = useState(0);
+  const [isKYCModalOpen, setIsKYCModalOpen] = useState(false);
+  const [hasSkippedKYC, setHasSkippedKYC] = useState(false);
 
   useEffect(() => {
     if (mainRef.current) {
@@ -52,7 +56,15 @@ export default function DashboardLayout() {
         checkUser();
       }
     });
-    return () => {
+  
+  const handleKYCClose = (skipped: boolean) => {
+    setIsKYCModalOpen(false);
+    if (skipped) {
+      setHasSkippedKYC(true);
+      sessionStorage.setItem('kyc_skipped', 'true');
+    }
+  };
+  return () => {
       authListener.subscription.unsubscribe();
     };
   }, [navigate]);
@@ -68,7 +80,13 @@ export default function DashboardLayout() {
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
       if (profile) {
         setIsAdmin(profile.role === 'admin' || profile.role === 'super_admin');
-        setKycStatus(profile.kyc_status || 'pending');
+        const status = profile.kyc_status || 'unverified';
+        setKycStatus(status);
+        
+        // Show KYC Modal on first load if unverified and not skipped yet
+        if (status === 'unverified' && !sessionStorage.getItem('kyc_skipped')) {
+          setIsKYCModalOpen(true);
+        }
       }
       
       const { count } = await supabase.from('reconciliation_issues').select('*', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('status', 'open');
@@ -94,6 +112,14 @@ export default function DashboardLayout() {
     navigate('/');
   };
 
+
+  const handleKYCClose = (skipped: boolean) => {
+    setIsKYCModalOpen(false);
+    if (skipped) {
+      setHasSkippedKYC(true);
+      sessionStorage.setItem('kyc_skipped', 'true');
+    }
+  };
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
       {/* Mobile menu overlay */}
@@ -273,6 +299,16 @@ export default function DashboardLayout() {
           </Routes>
         </div>
       </main>
+      
+      <KYCModal 
+        isOpen={isKYCModalOpen} 
+        onClose={handleKYCClose} 
+        user={currentUser} 
+        onSuccess={() => {
+           setKycStatus('pending');
+           setHasSkippedKYC(false);
+        }} 
+      />
     </div>
   );
 }
