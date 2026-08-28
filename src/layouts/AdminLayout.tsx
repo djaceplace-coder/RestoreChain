@@ -4,6 +4,7 @@ import { Loader2,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Link, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import LanguageSwitcher from "../components/LanguageSwitcher";
 
 // Placeholder imports for Admin views
 import AdminOverview from '../pages/admin/AdminOverview';
@@ -100,6 +101,7 @@ export default function AdminLayout() {
             <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
               <Shield size={18} />
             </div>
+            <img src="https://mfreznxsaybjvbhw.public.blob.vercel-storage.com/Tracefieldlogo.png" alt="Tracefield Admin Logo" className="h-8 w-auto brightness-0 invert" />
             <span className="font-display font-bold text-xl tracking-tight text-white">Tracefield Admin</span>
           </Link>
           <button 
@@ -161,6 +163,7 @@ export default function AdminLayout() {
             </div>
           </div>
           <div className="flex items-center gap-4 ml-4 shrink-0">
+             <LanguageSwitcher isDark={false} />
              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold border-2 border-red-200">
                A
              </div>

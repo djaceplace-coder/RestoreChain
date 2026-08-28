@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import OnboardingGoals from '../pages/onboarding/OnboardingGoals';
 import OnboardingConnect from '../pages/onboarding/OnboardingConnect';
 import OnboardingReview from '../pages/onboarding/OnboardingReview';
@@ -26,10 +27,9 @@ export default function OnboardingLayout() {
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-brand-dark">
       <header className="bg-white border-b border-gray-200 py-4 px-6 flex items-center justify-between sticky top-0 z-20">
         <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl shadow-md">
-            R
-          </div>
-          <span className="font-display font-bold tracking-tight text-brand-dark hidden sm:block">Tracefield</span>
+          
+          <img src="https://mfreznxsaybjvbhw.public.blob.vercel-storage.com/Tracefieldlogo.png" alt="Tracefield Logo" className="h-8 w-auto hidden sm:block" />
+            <span className="font-display font-bold tracking-tight text-brand-dark hidden sm:block">Tracefield</span>
         </Link>
         
         <div className="flex items-center gap-2">
@@ -50,6 +50,7 @@ export default function OnboardingLayout() {
         </div>
         
         <div className="w-[120px] text-right">
+          <LanguageSwitcher isDark={false} />
           <button className="text-sm font-bold text-gray-400 hover:text-brand-dark transition-colors">Save & Exit</button>
         </div>
       </header>

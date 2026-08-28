@@ -65,9 +65,8 @@ export default function Signup() {
         {/* Header */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-8 hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl">
-              R
-            </div>
+            
+            <img src="https://mfreznxsaybjvbhw.public.blob.vercel-storage.com/Tracefieldlogo.png" alt="Tracefield Logo" className="h-8 w-auto" />
             <span className="font-display font-bold text-xl tracking-tight text-brand-dark">Tracefield</span>
           </Link>
           <h1 className="text-3xl font-display font-bold text-brand-dark">Create account</h1>

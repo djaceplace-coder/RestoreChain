@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { 
   X, Menu, Search, Bell, User, LogOut, LayoutDashboard, Wallet, 
   History, Settings, Activity, Shield, Coins, Image, TrendingUp, 
@@ -42,6 +43,19 @@ export default function DashboardLayout() {
       mainRef.current.scrollTo(0, 0);
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" || !session) {
+        navigate("/login");
+      } else if (session) {
+        checkUser();
+      }
+    });
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   useEffect(() => {
     checkUser();
@@ -99,6 +113,7 @@ export default function DashboardLayout() {
             <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl shadow-md">
               R
             </div>
+            <img src="https://mfreznxsaybjvbhw.public.blob.vercel-storage.com/Tracefieldlogo.png" alt="Tracefield Logo" className="h-8 w-auto" />
             <span className="font-display font-bold text-xl tracking-tight text-brand-dark">Tracefield</span>
           </Link>
           <button 
@@ -227,6 +242,7 @@ export default function DashboardLayout() {
             </div>
           </div>
           <div className="flex items-center gap-4 ml-4 shrink-0">
+             <LanguageSwitcher isDark={false} />
              <Link to="/dashboard/notifications" className="p-2 text-gray-400 hover:text-brand-dark transition-colors relative">
                <Bell size={20} />
                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>

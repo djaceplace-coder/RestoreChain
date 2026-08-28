@@ -11,10 +11,9 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-16">
           <div className="col-span-2 lg:col-span-2">
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl">
-                R
-              </div>
-              <span className="font-display font-bold text-xl tracking-tight text-brand-dark">Tracefield</span>
+              
+              <img src="https://mfreznxsaybjvbhw.public.blob.vercel-storage.com/Tracefieldlogo.png" alt="Tracefield Logo" className="h-8 w-auto" />
+            <span className="font-display font-bold text-xl tracking-tight text-brand-dark">Tracefield</span>
             </div>
             <p className="text-brand-text-gray mb-8 max-w-sm">
               The premier digital asset recovery and blockchain forensic security platform.

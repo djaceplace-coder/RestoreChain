@@ -32,6 +32,7 @@ export default function Dashboard() {
             <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl shadow-md">
               R
             </div>
+            <img src="https://mfreznxsaybjvbhw.public.blob.vercel-storage.com/Tracefieldlogo.png" alt="Tracefield Logo" className="h-8 w-auto" />
             <span className="font-display font-bold text-xl tracking-tight text-brand-dark">Tracefield</span>
           </Link>
         </div>

@@ -1,6 +1,7 @@
 import { Menu, X, ChevronDown, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import LanguageSwitcher from "./LanguageSwitcher";
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -21,10 +22,9 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link to="/" className="flex-shrink-0 flex items-center gap-2 cursor-pointer" onClick={closeMenu}>
-            <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl">
-              R
-            </div>
-            <span className="font-display font-bold text-xl tracking-tight">Tracefield</span>
+            
+            <img src="https://mfreznxsaybjvbhw.public.blob.vercel-storage.com/Tracefieldlogo.png" alt="Tracefield Logo" className="h-8 w-auto" />
+            <span className="font-display font-bold text-xl tracking-tight text-brand-dark">Tracefield</span>
           </Link>
 
           {/* Desktop Menu */}
@@ -68,6 +68,7 @@ export default function Navbar() {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center space-x-4">
+            <LanguageSwitcher isDark={false} />
             <Link to="/login" className="text-sm font-medium text-brand-text-gray hover:text-brand-dark transition-colors">Sign in</Link>
             <Link to="/signup" className="bg-brand-purple text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-brand-purple/90 transition-colors flex items-center gap-2">
               Start for free <ArrowRight size={16} />
@@ -93,10 +94,9 @@ export default function Navbar() {
             {/* Mobile Menu Header */}
             <div className="flex justify-between items-center p-4 border-b border-gray-100 sticky top-0 bg-white z-10">
               <Link to="/" className="flex items-center gap-2" onClick={closeMenu}>
-                <div className="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-xl">
-                  R
-                </div>
-                <span className="font-display font-bold text-xl tracking-tight">Tracefield</span>
+                
+                <img src="https://mfreznxsaybjvbhw.public.blob.vercel-storage.com/Tracefieldlogo.png" alt="Tracefield Logo" className="h-8 w-auto" />
+            <span className="font-display font-bold text-xl tracking-tight text-brand-dark">Tracefield</span>
               </Link>
               <button onClick={closeMenu} className="p-2 text-gray-500 hover:text-brand-dark rounded-full hover:bg-gray-100 transition-colors">
                 <X size={24} />

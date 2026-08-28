@@ -41,29 +41,29 @@ export default function Testimonials() {
   ];
 
   return (
-    <section className="py-24 bg-gray-50 border-t border-gray-100">
+    <section className="py-24 bg-transparent border-t border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 max-w-3xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-display font-bold text-brand-dark mb-6">
+          <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">
             Trusted by victims and institutions alike
           </h2>
-          <p className="text-lg text-brand-text-gray">
+          <p className="text-lg text-gray-300">
             We have recovered over $120M in stolen and lost digital assets.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {reviews.map((review, idx) => (
-            <div key={idx} className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <div key={idx} className="bg-white/5 backdrop-blur-lg p-8 rounded-3xl shadow-sm border border-white/10">
               <div className="flex text-brand-green mb-4">
                 {[...Array(review.rating)].map((_, i) => (
                   <Star key={i} size={20} fill="currentColor" />
                 ))}
               </div>
-              <p className="text-brand-dark mb-6 text-lg leading-relaxed">"{review.content}"</p>
+              <p className="text-white mb-6 text-lg leading-relaxed">"{review.content}"</p>
               <div>
-                <p className="font-bold text-brand-dark">{review.name}</p>
-                <p className="text-sm text-brand-text-gray">{review.role}</p>
+                <p className="font-bold text-white">{review.name}</p>
+                <p className="text-sm text-gray-300">{review.role}</p>
               </div>
             </div>
           ))}

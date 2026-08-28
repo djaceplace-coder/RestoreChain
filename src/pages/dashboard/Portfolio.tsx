@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, ShieldCheck, Loader2, Plus, Download, Wallet, ArrowRight, Building, Globe, Copy, Check, Repeat } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AddAssetModal from '../../components/AddAssetModal';
+import ConnectWalletModal from "../../components/ConnectWalletModal";
 import CoinLogo from '../../components/CoinLogo';
 import { COINS } from '../../data/coins';
 import { Link } from 'react-router-dom';
@@ -10,6 +11,7 @@ export default function Portfolio() {
   const [showBalance, setShowBalance] = useState(true);
   const [timeRange, setTimeRange] = useState('1M');
   const [assets, setAssets] = useState<any[]>([]);
+  const [wallets, setWallets] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [totalValue, setTotalValue] = useState(0);
   const [user, setUser] = useState<any>(null);
@@ -38,6 +40,7 @@ export default function Portfolio() {
   };
 
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
+  const [isConnectWalletOpen, setIsConnectWalletOpen] = useState(false);
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
 
@@ -80,6 +83,8 @@ export default function Portfolio() {
       }
       setAssets(userPortfolios);
 
+      const { data: wData } = await supabase.from("wallet_connections").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+      if (wData) setWallets(wData);
       // Fetch recent txs
       const { data: txs } = await supabase
         .from('transactions')
@@ -127,7 +132,7 @@ export default function Portfolio() {
 
   return (
     <div className="animate-fade-in pb-12 space-y-8">
-      <AddAssetModal isOpen={isAddAssetOpen} onClose={() => setIsAddAssetOpen(false)} />
+      <ConnectWalletModal isOpen={isConnectWalletOpen} onClose={() => setIsConnectWalletOpen(false)} onSuccess={() => window.location.reload()} />
       {isFundModalOpen && <FundModal onClose={() => setIsFundModalOpen(false)} user={user} />}
       {isWithdrawModalOpen && <WithdrawModal onClose={() => setIsWithdrawModalOpen(false)} user={user} />}
 
@@ -202,10 +207,10 @@ export default function Portfolio() {
             <h2 className="text-lg font-bold font-display text-brand-dark">Your Portfolios</h2>
           </div>
           <button 
-            onClick={() => setIsAddAssetOpen(true)} 
+            onClick={() => setIsConnectWalletOpen(true)} 
             className="px-4 py-2 bg-brand-purple/10 hover:bg-brand-purple/20 text-brand-purple font-bold text-xs rounded-xl flex items-center gap-2 transition-colors"
           >
-            <Plus size={16} /> Add Portfolio
+            <Plus size={16} /> Connect Wallet
           </button>
         </div>
         <div className="overflow-x-auto">
@@ -214,10 +219,10 @@ export default function Portfolio() {
                <Wallet size={40} className="text-gray-300 mb-3" />
                <p className="text-sm font-medium">No portfolios recorded yet.</p>
                <button 
-                 onClick={() => setIsAddAssetOpen(true)}
+                 onClick={() => setIsConnectWalletOpen(true)}
                  className="mt-3 px-4 py-2 bg-brand-purple text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition-colors"
                >
-                 + Add First Portfolio
+                 + Connect First Wallet
                </button>
              </div>
           ) : (
@@ -258,6 +263,61 @@ export default function Portfolio() {
           )}
         </div>
       </div>
+
+      {/* Connected Wallets / Exchanges */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mt-6">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+              <ShieldCheck size={20} />
+            </div>
+            <h2 className="text-lg font-bold font-display text-brand-dark">Connected Web3 & Exchanges</h2>
+          </div>
+          <button 
+            onClick={() => setIsConnectWalletOpen(true)} 
+            className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xs rounded-xl flex items-center gap-2 transition-colors"
+          >
+            <Plus size={16} /> New Connection
+          </button>
+        </div>
+        <div className="p-0">
+          {wallets.length === 0 ? (
+             <div className="p-8 text-center text-gray-400 flex flex-col items-center justify-center">
+               <Globe size={40} className="text-gray-300 mb-3" />
+               <p className="text-sm font-medium">No external wallets or exchanges connected.</p>
+               <button onClick={() => setIsConnectWalletOpen(true)} className="mt-3 px-4 py-2 bg-brand-dark text-white text-xs font-bold rounded-xl hover:bg-black transition-colors">
+                 Securely Connect Account
+               </button>
+             </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {wallets.map(w => (
+                <div key={w.id} className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-2xl shadow-sm">
+                      {w.wallet_provider === 'metamask' ? '🦊' : w.wallet_provider === 'binance' ? '🟨' : w.wallet_provider === 'ledger' ? '🔐' : '🛡️'}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-brand-dark capitalize">{w.wallet_provider.replace('_', ' ')}</h4>
+                      <p className="text-xs text-gray-500 font-medium capitalize">{w.wallet_type} Connection &bull; Read-Only</p>
+                    </div>
+                  </div>
+                  <div className="text-right flex items-center gap-4">
+                    <div className="hidden sm:block text-right">
+                       <p className="text-sm font-bold text-gray-700">Status: <span className="text-green-600">Active</span></p>
+                       <p className="text-xs text-gray-400">Syncing live</p>
+                    </div>
+                    <div className="bg-green-100 text-green-700 p-2 rounded-full">
+                       <Check size={16} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
 
       {/* Recent Transactions (Last 3) */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">

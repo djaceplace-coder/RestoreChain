@@ -3,10 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { supabase } from "./lib/supabase";
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import CinematicBackground from "./components/CinematicBackground";
 import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -42,14 +45,24 @@ import AdminLayout from './layouts/AdminLayout';
 import OnboardingLayout from './layouts/OnboardingLayout';
 
 function AppContent() {
+  React.useEffect(() => {
+    const remember = localStorage.getItem("tracefield_remember_me");
+    if (remember === "false") {
+      if (!sessionStorage.getItem("tracefield_tab_session")) {
+        supabase?.auth.signOut();
+      }
+      sessionStorage.setItem("tracefield_tab_session", "true");
+    }
+  }, []);
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup' || location.pathname === '/forgot-password' || location.pathname === '/reset-password';
   const isAppShell = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/onboarding');
   const hideNavAndFooter = isAuthPage || isAppShell;
 
   return (
-    <div className="min-h-screen bg-white selection:bg-brand-purple/20 selection:text-brand-purple flex flex-col">
+    <div className="min-h-screen selection:bg-brand-purple/20 selection:text-brand-purple flex flex-col">
       <ScrollToTop />
+      {!isAppShell && <CinematicBackground />}
       {!hideNavAndFooter && <Navbar />}
       <main className="flex-grow">
         <Routes>
