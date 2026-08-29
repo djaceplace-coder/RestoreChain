@@ -20,6 +20,8 @@ export default function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [supportQueueCount, setSupportQueueCount] = useState(0);
+  const [pendingKycCount, setPendingKycCount] = useState(0);
+
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -34,18 +36,32 @@ export default function AdminLayout() {
     };
     checkAdmin();
     
-    // Fetch unique users in support
-    const fetchSupportCount = async () => {
-      const { count } = await supabase.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open');
-      setSupportQueueCount(count || 0);
+    const fetchCounts = async () => {
+      // Support
+      const { count: supportCount } = await supabase.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open');
+      setSupportQueueCount(supportCount || 0);
+
+      // KYC
+      const { count: kycCount } = await supabase.from('kyc_documents').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+      const { count: ndaCount } = await supabase.from('user_documents').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+      setPendingKycCount((kycCount || 0) + (ndaCount || 0));
     };
-    fetchSupportCount();
+
+    fetchCounts();
     
-    const channel = supabase.channel('layout_support')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, fetchSupportCount)
+    const channel1 = supabase.channel('layout_support')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, fetchCounts)
       .subscribe();
       
-    return () => { supabase.removeChannel(channel); };
+    const channel2 = supabase.channel('layout_kyc')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kyc_documents' }, fetchCounts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_documents' }, fetchCounts)
+      .subscribe();
+      
+    return () => { 
+      supabase.removeChannel(channel1); 
+      supabase.removeChannel(channel2);
+    };
   }, []);
 
   // Scroll to top on route change
@@ -121,6 +137,7 @@ export default function AdminLayout() {
           </Link>
           <Link to="/admin/kyc" onClick={closeMobileMenu} className={navLinkClass('/admin/kyc')}>
             <ShieldAlert size={18} /> KYC Approvals
+            {pendingKycCount > 0 && <span className="ml-auto bg-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">{pendingKycCount}</span>}
           </Link>
           <Link to="/admin/support" onClick={closeMobileMenu} className={navLinkClass('/admin/support')}>
             <MessageSquare size={18} /> Support Queue

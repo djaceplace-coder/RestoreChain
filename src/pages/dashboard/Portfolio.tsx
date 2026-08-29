@@ -228,15 +228,17 @@ export default function Portfolio() {
               const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (asset.value / (Number(asset.balance) || 0)) : 0);
               return sum + (livePrice * (Number(asset.balance) || 0));
             }, 0);
-            const btcEquivalent = cryptoUsdValue / btcPrice;
+            const fiat = Number(userProfile?.fiat_balance || 0);
+            const liveCryptoUsd = displayedBalance - fiat;
+            const liveBtcEquivalent = liveCryptoUsd > 0 ? liveCryptoUsd / btcPrice : 0;
             
             return (
               <div className="relative z-10">
                 <div className="text-3xl md:text-4xl font-display font-bold text-brand-dark mb-1">
-                  {showBalance ? `${btcEquivalent.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 })} BTC` : '•••••••• BTC'}
+                  {showBalance ? `${liveBtcEquivalent.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 })} BTC` : '•••••••• BTC'}
                 </div>
                 <div className="text-sm font-bold text-gray-500 mb-3">
-                  {showBalance ? `≈ $${cryptoUsdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '≈ $••••••••'}
+                  {showBalance ? `≈ ${liveCryptoUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '≈ $••••••••'}
                 </div>
               </div>
             );

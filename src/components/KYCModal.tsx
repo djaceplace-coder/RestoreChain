@@ -153,7 +153,7 @@ export default function KYCModal({ isOpen, onClose, user, onSuccess }: KYCModalP
                   <p className="text-xs text-gray-500 mt-1">Tap to select file or take a photo</p>
                 </>
               )}
-              <input type="file" accept="image/*" capture="environment" onChange={(e) => handleFileUpload(e, setDocFile)} className="absolute inset-0 opacity-0 cursor-pointer" />
+              <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, setDocFile)} className="absolute inset-0 opacity-0 cursor-pointer" />
             </div>
 
             <div className="flex gap-3 pt-4">
@@ -191,7 +191,7 @@ export default function KYCModal({ isOpen, onClose, user, onSuccess }: KYCModalP
                   <p className="text-xs text-gray-500 mt-1">Tap to select file or take a photo</p>
                 </>
               )}
-              <input type="file" accept="image/*" capture="environment" onChange={(e) => handleFileUpload(e, setDocBackFile)} className="absolute inset-0 opacity-0 cursor-pointer" />
+              <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, setDocBackFile)} className="absolute inset-0 opacity-0 cursor-pointer" />
             </div>
 
             <div className="flex gap-3 pt-4">
