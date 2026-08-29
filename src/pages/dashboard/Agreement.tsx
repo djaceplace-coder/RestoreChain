@@ -8,7 +8,7 @@ import jsPDF from 'jspdf';
 export default function Agreement() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-  const [kycStatus, setKycStatus] = useState('unverified');
+  const [agreementStatus, setAgreementStatus] = useState('unverified');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -23,7 +23,8 @@ export default function Agreement() {
         const { data: p } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
         if (p) {
           setProfile(p);
-          if (p.kyc_status) setKycStatus(p.kyc_status);
+          const { data: docs } = await supabase.from("user_documents").select("status").eq("user_id", data.user.id).eq("document_type", "terms_agreement").order("created_at", { ascending: false }).limit(1);
+          if (docs && docs.length > 0) { setAgreementStatus(docs[0].status); }
         }
       }
       setLoading(false);
@@ -61,28 +62,11 @@ export default function Agreement() {
       const { error: docError } = await supabase.from('user_documents').insert({
         user_id: user.id,
         document_type: 'terms_agreement',
-        signature_data: signatureData,
+        file_url: signatureData,
         status: 'pending'
       });
 
-      if (docError) {
-        console.error("Doc Error:", docError);
-        setErrorMsg("Database Error (user_documents): " + docError.message + ". Did you run the SQL script in Supabase?");
-        setSubmitting(false);
-        return;
-      }
-
-      // Update profile KYC status
-      const { error: profileError } = await supabase.from('profiles').update({ kyc_status: 'pending' }).eq('id', user.id);
-      
-      if (profileError) {
-        console.error("Profile Error:", profileError);
-        setErrorMsg("Database Error (profiles): " + profileError.message + ". Did you run the SQL script in Supabase?");
-        setSubmitting(false);
-        return;
-      }
-
-      setKycStatus('pending');
+      if (docError) { console.error(docError); setErrorMsg(docError.message); setSubmitting(false); return; } setAgreementStatus('pending');
     } catch (err: any) {
       console.error("Exception:", err);
       setErrorMsg("Unexpected Error: " + err.message);
@@ -99,7 +83,7 @@ export default function Agreement() {
         <p className="text-gray-500">Please review, sign, and submit the Terms and Conditions to activate your account.</p>
       </header>
 
-      {kycStatus === 'pending' ? (
+      {agreementStatus === 'pending' ? (
         <div className="bg-orange-50 border border-orange-200 rounded-2xl p-8 text-center mb-8">
           <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-500">
             <Loader2 className="animate-spin" size={32} />
@@ -107,7 +91,7 @@ export default function Agreement() {
           <h2 className="text-xl font-bold text-brand-dark mb-2">Agreement Under Review</h2>
           <p className="text-gray-600">Your signed agreement has been submitted and is currently pending administrator approval.</p>
         </div>
-      ) : kycStatus === 'approved' ? (
+      ) : agreementStatus === 'approved' ? (
         <div className="bg-green-50 border border-green-200 rounded-2xl p-8 text-center mb-8">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-500">
             <Check size={32} />
