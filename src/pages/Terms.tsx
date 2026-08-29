@@ -84,7 +84,7 @@ export default function Terms() {
 
           <section className="bg-gray-50 p-8 rounded-2xl border border-gray-200 mt-12">
             <h2 className="text-2xl font-bold text-brand-dark mb-4">Questions about our Terms?</h2>
-            <p className="mb-6">If you have any questions or concerns about these terms of service, please contact our legal team.</p>
+            <p className="mb-6">If you have any questions or concerns about these terms of service, please contact our legal team at <strong>info@tracefield.co.uk</strong> or write to us at our London, UK office.</p>
             <Link to="/contact" className="inline-flex items-center gap-2 px-6 py-3 bg-brand-dark text-white font-bold rounded-xl hover:bg-black transition-colors">
               Contact Legal Team
             </Link>

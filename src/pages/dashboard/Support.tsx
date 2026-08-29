@@ -143,7 +143,7 @@ export default function Support() {
     <div className="animate-fade-in flex flex-col h-[calc(100vh-140px)]">
       <header className="mb-6">
         <h1 className="text-3xl font-display font-bold text-brand-dark mb-2">Support Center</h1>
-        <p className="text-brand-text-gray">Chat securely with our specialists.</p>
+        <p className="text-brand-text-gray">Chat securely with our specialists. For direct inquiries, email us at <strong>info@tracefield.co.uk</strong> (London, UK).</p>
       </header>
       
       <div className="flex-1 flex gap-6 overflow-hidden">

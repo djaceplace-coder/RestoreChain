@@ -118,13 +118,14 @@ export default function Agreement() {
                 <div className="text-center mb-10 border-b-2 border-gray-900 pb-6">
                   <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-widest text-black mb-2">Tracefield</h1>
                   <p className="text-gray-500">MASTER SERVICES AGREEMENT & TERMS OF USE</p>
+                  <p className="text-xs text-gray-400 mt-2">London, UK | info@tracefield.co.uk</p>
                 </div>
                 
                 <p className="mb-4 text-right">Date: {new Date().toLocaleDateString()}</p>
                 <p className="mb-8 font-bold">Client Account: {profile?.email}</p>
 
                 <div className="space-y-6 text-justify">
-                  <p>This Master Services Agreement (this "Agreement") is entered into by and between Tracefield Inc. ("Company") and the Client listed above, governing the usage of the Tracefield platform, cryptographic asset recovery services, and secure portfolio management.</p>
+                  <p>This Master Services Agreement (this "Agreement") is entered into by and between Tracefield Ltd. ("Company") and the Client listed above, governing the usage of the Tracefield platform, cryptographic asset recovery services, and secure portfolio management.</p>
                   
                   <h4 className="font-bold text-lg mt-6 mb-2">1. Scope of Services & Opportunities</h4>
                   <p>Tracefield provides advanced cryptographic tracking, asset recovery, and institutional-grade portfolio management. Clients have the opportunity to access decentralized finance (DeFi) tools, high-yield staking options, and tax-loss harvesting utilities under our secure custodial infrastructure.</p>

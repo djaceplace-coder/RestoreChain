@@ -149,6 +149,10 @@ export default function Home() {
           <Link to="/signup" className="inline-block bg-brand-green text-brand-dark px-10 py-5 rounded-full text-lg font-bold hover:bg-white transition-colors shadow-xl">
             Start a Free Case Review
           </Link>
+          <div className="mt-12 text-brand-purple-light text-sm flex flex-col items-center gap-2">
+            <p><strong>Email:</strong> info@tracefield.co.uk</p>
+            <p><strong>Location:</strong> London, United Kingdom</p>
+          </div>
         </div>
       </section>
     </main>

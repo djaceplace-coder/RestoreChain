@@ -15,9 +15,13 @@ export default function Footer() {
               <img src="https://mfreznxsaybjvbhw.public.blob.vercel-storage.com/Tracefieldlogo.png" alt="Tracefield Logo" className="h-8 w-auto" />
             <span className="font-display font-bold text-xl tracking-tight text-brand-dark">Tracefield</span>
             </div>
-            <p className="text-brand-text-gray mb-8 max-w-sm">
+            <p className="text-brand-text-gray mb-4 max-w-sm">
               The premier digital asset recovery and blockchain forensic security platform.
             </p>
+            <div className="mb-8">
+              <p className="text-brand-text-gray text-sm mb-1">Email: <a href="mailto:info@tracefield.co.uk" className="hover:text-brand-purple">info@tracefield.co.uk</a></p>
+              <p className="text-brand-text-gray text-sm">Location: London, UK</p>
+            </div>
             <div className="flex gap-4">
               <button 
                 onClick={installPWA}
