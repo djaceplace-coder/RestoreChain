@@ -8,6 +8,7 @@ import ConnectWalletModal from "../../components/ConnectWalletModal";
 import CoinLogo from '../../components/CoinLogo';
 import { COINS } from '../../data/coins';
 import { Link } from 'react-router-dom';
+import { useLivePrices } from '../../hooks/useLivePrices';
 
 export default function Portfolio() {
   const [showBalance, setShowBalance] = useState(true);
@@ -21,6 +22,7 @@ export default function Portfolio() {
   const [loading, setLoading] = useState(true);
   const [displayedBalance, setDisplayedBalance] = useState(0);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const { coins: liveRates, btcPrice } = useLivePrices(30000);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -57,7 +59,6 @@ export default function Portfolio() {
   const [isConnectWalletOpen, setIsConnectWalletOpen] = useState(false);
   const [isFundModalOpen, setIsFundModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
-  const [liveRates, setLiveRates] = useState<any[]>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -65,31 +66,6 @@ export default function Portfolio() {
       setUser(data?.user);
     };
     init();
-    
-    // Fetch real-time cryptocurrency data
-    const fetchLiveRates = async () => {
-      try {
-        const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false');
-        if (res.ok) {
-          const data = await res.json();
-          const formatted = data.map((d: any) => ({
-            id: d.id,
-            symbol: d.symbol.toUpperCase(),
-            name: d.name,
-            price: d.current_price,
-            change24h: d.price_change_percentage_24h,
-            image: d.image
-          }));
-          setLiveRates(formatted);
-        }
-      } catch (err) {
-        console.error("Failed to fetch live rates", err);
-      }
-    };
-    
-    fetchLiveRates();
-    const interval = setInterval(fetchLiveRates, 60000); // refresh every minute
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -449,34 +425,29 @@ export default function Portfolio() {
                   <th className="px-6 py-4 font-medium text-right">Date</th>
                 </tr>
               </thead>
-                            <tbody className="divide-y divide-gray-100">
-                {assets.map((asset) => {
-                  const liveRateData = liveRates.find((r: any) => r.symbol.toUpperCase() === asset.symbol.toUpperCase());
-                  const livePrice = liveRateData ? liveRateData.price : (asset.balance > 0 ? (asset.value / asset.balance) : 0);
-                  const liveValue = livePrice * asset.balance;
-                  
-                  return (
-                  <tr key={asset.id} className="hover:bg-gray-50/50 transition-colors">
+              <tbody className="divide-y divide-gray-100">
+                {transactions.slice(0, 5).map((tx) => (
+                  <tr key={tx.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <CoinLogo symbol={asset.symbol} size="md" />
-                        <div>
-                          <p className="font-bold text-brand-dark">{asset.name}</p>
-                          <p className="text-xs text-gray-500">{asset.symbol}</p>
-                        </div>
-                      </div>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold capitalize ${
+                        tx.type === 'deposit' ? 'bg-green-100 text-green-700' :
+                        tx.type === 'withdrawal' ? 'bg-orange-100 text-orange-700' :
+                        'bg-blue-100 text-blue-700'
+                      }`}>
+                        {tx.type}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <p className="font-bold text-brand-dark">{asset.balance} {asset.symbol}</p>
+                    <td className="px-6 py-4 font-mono font-bold text-brand-dark">
+                      {tx.amount}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <p className="font-medium text-brand-dark">${Number(livePrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                    <td className="px-6 py-4 text-sm text-gray-600 font-bold">
+                      {tx.asset || 'BTC'}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <p className="font-bold text-brand-dark">${Number(liveValue || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                    <td className="px-6 py-4 text-right text-xs text-gray-500 font-mono">
+                      {tx.created_at ? new Date(tx.created_at).toLocaleDateString() : 'Recent'}
                     </td>
                   </tr>
-                )})}
+                ))}
               </tbody>
             </table>
           )}

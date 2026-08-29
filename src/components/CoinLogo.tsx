@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface CoinLogoProps {
   symbol: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  image?: string;
 }
 
-export default function CoinLogo({ symbol = '', size = 'md', className = '' }: CoinLogoProps) {
+export default function CoinLogo({ symbol = '', size = 'md', className = '', image }: CoinLogoProps) {
+  const [imgError, setImgError] = useState(false);
   const sym = (symbol || '').toUpperCase();
 
   const sizeClasses = {
@@ -15,6 +17,18 @@ export default function CoinLogo({ symbol = '', size = 'md', className = '' }: C
     lg: 'w-11 h-11 text-sm',
     xl: 'w-14 h-14 text-base'
   }[size];
+
+  if (image && !imgError) {
+    return (
+      <img
+        src={image}
+        alt={symbol}
+        onError={() => setImgError(true)}
+        className={`${sizeClasses} rounded-full object-contain shrink-0 ${className}`}
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
 
   // Specific logo designs based on cryptocurrency symbol
   if (sym === 'BTC' || sym === 'BITCOIN') {
