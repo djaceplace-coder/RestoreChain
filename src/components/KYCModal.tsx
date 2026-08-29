@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, X, Shield, CheckCircle2, ChevronRight, FileText, User } from 'lucide-react';
+import { Camera, Upload, X, Shield, CheckCircle2, ChevronRight, FileText, User, RefreshCcw } from 'lucide-react';
 import Modal from './ui/Modal';
 import { supabase } from '../lib/supabase';
+import Webcam from 'react-webcam';
 
 interface KYCModalProps {
   isOpen: boolean;
@@ -16,11 +17,19 @@ export default function KYCModal({ isOpen, onClose, user, onSuccess }: KYCModalP
   const [docFile, setDocFile] = useState<string | null>(null);
   const [docBackFile, setDocBackFile] = useState<string | null>(null);
   const [selfieFile, setSelfieFile] = useState<string | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [address, setAddress] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [language, setLanguage] = useState('en');
+
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  const webcamRef = useRef<Webcam>(null);
+  
+  const captureSelfie = React.useCallback(() => {
+    const imageSrc = webcamRef.current?.getScreenshot();
+    if (imageSrc) setSelfieFile(imageSrc);
+  }, [webcamRef]);
 
   const needsBack = docType === "driver's license" || docType === "national id";
 
@@ -208,19 +217,48 @@ export default function KYCModal({ isOpen, onClose, user, onSuccess }: KYCModalP
               <p className="text-sm text-gray-500">Ensure your face is clearly visible.</p>
             </div>
             
-            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center relative hover:border-brand-purple hover:bg-brand-purple/5 transition-colors">
+            <div className="border border-gray-200 rounded-2xl overflow-hidden bg-black text-center relative">
               {selfieFile ? (
-                <div className="flex items-center justify-center gap-2 text-green-600 font-bold">
-                  <CheckCircle2 size={24} /> Selfie Attached
+                <div className="relative">
+                  <img src={selfieFile} alt="Selfie" className="w-full h-auto" />
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <div className="bg-white px-4 py-2 rounded-xl text-green-600 font-bold flex items-center gap-2">
+                      <CheckCircle2 size={20} /> Captured
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setSelfieFile(null)}
+                    className="absolute top-4 right-4 bg-white/20 p-2 rounded-full text-white hover:bg-white/40 transition-colors"
+                  >
+                    <RefreshCcw size={20} />
+                  </button>
                 </div>
               ) : (
-                <>
-                  <Camera className="mx-auto text-gray-400 mb-2" size={32} />
-                  <p className="text-sm font-bold text-brand-dark">Take a Selfie</p>
-                  <p className="text-xs text-gray-500 mt-1">Tap to use camera</p>
-                </>
+                <div className="relative">
+                  <Webcam
+                    audio={false}
+                    ref={webcamRef}
+                    screenshotFormat="image/jpeg"
+                    videoConstraints={{ facingMode }}
+                    className="w-full h-[300px] object-cover"
+                  />
+                  <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-4">
+                    <button 
+                      onClick={() => setFacingMode(prev => prev === "user" ? "environment" : "user")}
+                      className="bg-white/20 backdrop-blur-sm p-3 rounded-full text-white hover:bg-white/40 transition-colors"
+                      title="Switch Camera"
+                    >
+                      <RefreshCcw size={20} />
+                    </button>
+                    <button 
+                      onClick={captureSelfie}
+                      className="bg-brand-purple text-white p-4 rounded-full border-4 border-white shadow-lg hover:bg-purple-700 transition-colors"
+                    >
+                      <Camera size={24} />
+                    </button>
+                  </div>
+                </div>
               )}
-              <input type="file" accept="image/*" capture="user" onChange={(e) => handleFileUpload(e, setSelfieFile)} className="absolute inset-0 opacity-0 cursor-pointer" />
             </div>
 
             <div className="flex gap-3 pt-4">

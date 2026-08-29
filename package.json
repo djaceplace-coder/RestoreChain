@@ -30,6 +30,7 @@
     "react-i18next": "^17.0.12",
     "react-router-dom": "^7.18.2",
     "react-signature-canvas": "^1.1.0-alpha.2",
+    "react-webcam": "^7.2.0",
     "recharts": "^3.10.1",
     "vite": "^6.2.3"
   },
