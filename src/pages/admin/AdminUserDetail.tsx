@@ -3,7 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { 
   ArrowLeft, Wallet, History, Activity, Receipt, MessageSquare, 
   ShieldAlert, Loader2, CheckCircle, Bitcoin, DollarSign, 
-  TrendingUp, RefreshCw, FileText, ArrowRight, Check
+  TrendingUp, RefreshCw, FileText, ArrowRight, Check,
+  PlusCircle, MinusCircle
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useLivePrices } from '../../hooks/useLivePrices';
@@ -28,6 +29,8 @@ export default function AdminUserDetail() {
 
   // Overhauled Balance & System Update State
   const [provisionMode, setProvisionMode] = useState<'crypto' | 'fiat'>('crypto');
+  const [txAction, setTxAction] = useState<'credit' | 'debit'>('credit');
+  const [deductionReason, setDeductionReason] = useState('Transfer Out');
   const [selectedAsset, setSelectedAsset] = useState('BTC');
   const [cryptoAmount, setCryptoAmount] = useState('');
   const [usdAmount, setUsdAmount] = useState('');
@@ -110,8 +113,14 @@ export default function AdminUserDetail() {
       const currentRate = getPrice(asset, asset === 'BTC' ? btcPrice : 1);
       const calculatedUsd = (num * currentRate).toFixed(2);
       setUsdAmount(calculatedUsd);
-      setMessageTitle(`${asset} Balance Credited`);
-      setMessageBody(`Your account has been credited with ${num} ${asset} (≈ $${Number(calculatedUsd).toLocaleString()}).`);
+      
+      if (txAction === 'credit') {
+        setMessageTitle(`${asset} Balance Credited`);
+        setMessageBody(`Your account has been credited with ${num} ${asset} (≈ $${Number(calculatedUsd).toLocaleString()}).`);
+      } else {
+        setMessageTitle(`${asset} Balance Deduction`);
+        setMessageBody(`A deduction of ${num} ${asset} (≈ $${Number(calculatedUsd).toLocaleString()}) has been processed. Reason: ${deductionReason}`);
+      }
     } else {
       setUsdAmount('');
     }
@@ -126,8 +135,14 @@ export default function AdminUserDetail() {
       if (currentRate > 0) {
         const calculatedCrypto = (num / currentRate).toFixed(6);
         setCryptoAmount(calculatedCrypto);
-        setMessageTitle(`${asset} Balance Credited`);
-        setMessageBody(`Your account has been credited with ${calculatedCrypto} ${asset} (≈ $${num.toLocaleString()}).`);
+        
+        if (txAction === 'credit') {
+          setMessageTitle(`${asset} Balance Credited`);
+          setMessageBody(`Your account has been credited with ${calculatedCrypto} ${asset} (≈ $${num.toLocaleString()}).`);
+        } else {
+          setMessageTitle(`${asset} Balance Deduction`);
+          setMessageBody(`A deduction of ${calculatedCrypto} ${asset} (≈ $${num.toLocaleString()}) has been processed. Reason: ${deductionReason}`);
+        }
       }
     } else {
       setCryptoAmount('');
@@ -160,7 +175,7 @@ export default function AdminUserDetail() {
   const handleSystemUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setUpdateStatus('Executing balance provisioning...');
+    setUpdateStatus(`Executing balance ${txAction === 'credit' ? 'provisioning' : 'deduction'}...`);
 
     try {
       const finalUsdAmount = parseFloat(usdAmount) || 0;
@@ -173,19 +188,21 @@ export default function AdminUserDetail() {
       }
 
       const currentTotal = Number(user?.total_balance) || 0;
-      const newTotalBalance = currentTotal + finalUsdAmount;
+      const valSign = txAction === 'credit' ? 1 : -1;
+      const newTotalBalance = Math.max(0, currentTotal + (finalUsdAmount * valSign));
 
       // 1. Update Profile Balance
       const profileUpdates: any = { total_balance: newTotalBalance };
       if (provisionMode === 'fiat') {
-        profileUpdates.fiat_balance = (Number(user?.fiat_balance) || 0) + finalUsdAmount;
+        const currentFiat = Number(user?.fiat_balance) || 0;
+        profileUpdates.fiat_balance = Math.max(0, currentFiat + (finalUsdAmount * valSign));
       }
       const { error: profErr } = await supabase.from('profiles').update(profileUpdates).eq('id', id);
       if (profErr) throw profErr;
 
       // 2. Manage Portfolio Asset (BTC / Crypto)
       if (provisionMode === 'crypto') {
-        const qtyToAdd = finalCryptoQty > 0 ? finalCryptoQty : (finalUsdAmount / (getPrice(assetSymbol) || btcPrice || 1));
+        const qtyToChange = finalCryptoQty > 0 ? finalCryptoQty : (finalUsdAmount / (getPrice(assetSymbol) || btcPrice || 1));
         
         // Check existing portfolios
         let { data: existingPortfolios } = await supabase
@@ -211,17 +228,17 @@ export default function AdminUserDetail() {
 
         if (existing) {
           await supabase.from(targetTable).update({
-            balance: Number(existing.balance || 0) + qtyToAdd,
-            value: Number(existing.value || 0) + finalUsdAmount,
+            balance: Math.max(0, Number(existing.balance || 0) + (qtyToChange * valSign)),
+            value: Math.max(0, Number(existing.value || 0) + (finalUsdAmount * valSign)),
           }).eq('id', existing.id);
-        } else {
-          // Insert new asset into portfolios
+        } else if (txAction === 'credit') {
+          // Insert new asset into portfolios only if crediting
           const assetName = assetSymbol === 'BTC' ? 'Bitcoin' : assetSymbol === 'ETH' ? 'Ethereum' : assetSymbol === 'SOL' ? 'Solana' : assetSymbol;
           await supabase.from('portfolios').insert({
             user_id: id,
             name: assetName,
             symbol: assetSymbol,
-            balance: qtyToAdd,
+            balance: qtyToChange,
             value: finalUsdAmount,
             color: assetSymbol === 'BTC' ? 'bg-orange-500' : 'bg-blue-500',
           });
@@ -233,13 +250,16 @@ export default function AdminUserDetail() {
         ? `${finalCryptoQty || (finalUsdAmount / btcPrice).toFixed(6)} ${assetSymbol}` 
         : `$${finalUsdAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
+      // Include reason in status if deduction
+      const txStatus = txAction === 'debit' ? `completed - ${deductionReason}` : 'completed';
+
       await supabase.from('transactions').insert({
         user_id: id,
-        type: 'deposit',
-        amount: txDisplayAmount,
+        type: txAction === 'credit' ? 'deposit' : 'withdrawal',
+        amount: (txAction === 'debit' ? '-' : '+') + txDisplayAmount,
         value_usd: finalUsdAmount,
         asset: assetSymbol,
-        status: 'completed',
+        status: txStatus,
         created_at: formattedDate,
       });
 
@@ -247,13 +267,13 @@ export default function AdminUserDetail() {
       await supabase.from('notifications').insert({
         user_id: id,
         type: 'system',
-        title: messageTitle || `${assetSymbol} Balance Added`,
-        message: messageBody || `Your account balance was credited with ${txDisplayAmount}.`,
+        title: messageTitle || `${assetSymbol} Balance ${txAction === 'credit' ? 'Added' : 'Deducted'}`,
+        message: messageBody || `Your account balance was ${txAction === 'credit' ? 'credited with' : 'deducted by'} ${txDisplayAmount}.`,
         is_read: false,
         created_at: formattedDate,
       });
 
-      setUpdateStatus(`Success! Credited ${txDisplayAmount} ($${finalUsdAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}) to ${user?.first_name || 'User'}.`);
+      setUpdateStatus(`Success! ${txAction === 'credit' ? 'Credited' : 'Deducted'} ${txDisplayAmount} ($${finalUsdAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}) ${txAction === 'credit' ? 'to' : 'from'} ${user?.first_name || 'User'}.`);
       setCryptoAmount('');
       setUsdAmount('');
       await fetchUserAndData();
@@ -468,6 +488,46 @@ export default function AdminUserDetail() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-3 mb-6 p-1.5 bg-gray-100 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setTxAction('credit');
+                  setCryptoAmount('');
+                  setUsdAmount('');
+                  setMessageTitle(`${selectedAsset} Balance Credited`);
+                  setMessageBody(`Your account has been credited with new asset holdings.`);
+                }}
+                className={`py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                  txAction === 'credit'
+                    ? 'bg-white text-green-700 shadow-sm border border-green-200'
+                    : 'text-gray-500 hover:text-green-700'
+                }`}
+              >
+                <PlusCircle size={16} />
+                Add (Credit) Balance
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTxAction('debit');
+                  setCryptoAmount('');
+                  setUsdAmount('');
+                  setMessageTitle(`${selectedAsset} Balance Deduction`);
+                  setMessageBody(`A deduction has been processed. Reason: ${deductionReason}`);
+                }}
+                className={`py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                  txAction === 'debit'
+                    ? 'bg-white text-red-700 shadow-sm border border-red-200'
+                    : 'text-gray-500 hover:text-red-700'
+                }`}
+              >
+                <MinusCircle size={16} />
+                Deduct (Transfer Out)
+              </button>
+            </div>
+
             {/* Mode Selection: Crypto (BTC direct) vs Fiat */}
             <div className="grid grid-cols-2 gap-3 mb-6 p-1.5 bg-gray-100 rounded-2xl">
               <button
@@ -532,11 +592,11 @@ export default function AdminUserDetail() {
                   </div>
 
                   {/* Dual Synchronized Inputs: BTC Quantity & USD Value */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 bg-orange-50/50 rounded-2xl border border-orange-100">
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl border ${txAction === 'credit' ? 'bg-orange-50/50 border-orange-100' : 'bg-red-50/50 border-red-100'}`}>
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
-                        <span>Direct {selectedAsset} Amount*</span>
-                        <span className="text-[10px] text-orange-600 font-mono">1 {selectedAsset} = ${getPrice(selectedAsset, btcPrice).toLocaleString()}</span>
+                        <span>Direct {selectedAsset} Amount to {txAction === 'credit' ? 'Add' : 'Deduct'}*</span>
+                        <span className={`text-[10px] font-mono ${txAction === 'credit' ? 'text-orange-600' : 'text-red-600'}`}>1 {selectedAsset} = ${getPrice(selectedAsset, btcPrice).toLocaleString()}</span>
                       </label>
                       <div className="relative">
                         <input
@@ -577,11 +637,11 @@ export default function AdminUserDetail() {
               )}
 
               {provisionMode === 'fiat' && (
-                <div className="p-5 bg-green-50/50 rounded-2xl border border-green-100">
+                <div className={`p-5 rounded-2xl border ${txAction === 'credit' ? 'bg-green-50/50 border-green-100' : 'bg-red-50/50 border-red-100'}`}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">
-                        Direct Fiat Balance to Add ({user?.preferred_currency || 'USD'})*
+                        Direct Fiat Balance to {txAction === 'credit' ? 'Add' : 'Deduct'} ({user?.preferred_currency || 'USD'})*
                       </label>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">$</span>
@@ -601,13 +661,36 @@ export default function AdminUserDetail() {
                       <label className="block text-xs font-bold text-gray-700 mb-1">
                         Live BTC Equivalent
                       </label>
-                      <div className="py-3 px-4 bg-white border border-gray-200 rounded-xl text-base font-bold font-mono text-orange-600">
+                      <div className={`py-3 px-4 bg-white border border-gray-200 rounded-xl text-base font-bold font-mono ${txAction === 'credit' ? 'text-orange-600' : 'text-red-600'}`}>
                         {usdAmount && btcPrice > 0 
                           ? `${(parseFloat(usdAmount) / btcPrice).toFixed(6)} BTC`
                           : '0.000000 BTC'}
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Deduction Reason (if debiting) */}
+              {txAction === 'debit' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Reason for Deduction</label>
+                  <select
+                    value={deductionReason}
+                    onChange={(e) => {
+                      setDeductionReason(e.target.value);
+                      if (txAction === 'debit' && !messageBody.includes('credited')) {
+                        setMessageBody(`A deduction has been processed. Reason: ${e.target.value}`);
+                      }
+                    }}
+                    className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-dark"
+                  >
+                    <option value="Transfer Out">Transfer Out to External Wallet</option>
+                    <option value="Network Fee Deduction">Network Fee Deduction</option>
+                    <option value="Security Service Fee">Security Service Fee</option>
+                    <option value="Correction">Balance Correction</option>
+                    <option value="Liquidation">Asset Liquidation</option>
+                  </select>
                 </div>
               )}
 
@@ -666,7 +749,7 @@ export default function AdminUserDetail() {
                   className="px-8 py-3.5 bg-brand-dark text-white font-bold rounded-2xl text-sm hover:bg-black transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50"
                 >
                   {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : null}
-                  Execute Balance Credit
+                  Execute Balance {txAction === 'credit' ? 'Credit' : 'Deduction'}
                 </button>
               </div>
             </form>
