@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Users, ShieldAlert, CheckCircle, Clock, Search, ArrowRight } from 'lucide-react';
+import { Users, ShieldAlert, CheckCircle, Clock, Search, ArrowRight, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function AdminOverview() {
-  const [stats, setStats] = useState({ users: 0, balance: 0, transactions: 0, recon: 0, subs: 0, tickets: 0 });
+  const [stats, setStats] = useState({ users: 0, balance: 0, transactions: 0, recon: 0, subs: 0, tickets: 0, pending_kyc: 0, pending_nda: 0 });
   const [recentTx, setRecentTx] = useState<any[]>([]);
   
   useEffect(() => {
@@ -16,10 +16,12 @@ export default function AdminOverview() {
       const { count: recon } = await supabase.from('reconciliation_issues').select('*', { count: 'exact', head: true }).eq('status', 'open');
       const { count: subs } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).neq('tier', 'free');
       const { count: supportCount } = await supabase.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open');
+      const { count: pendingKyc } = await supabase.from('kyc_documents').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+      const { count: pendingNda } = await supabase.from('user_documents').select('*', { count: 'exact', head: true }).eq('status', 'pending');
       const uniqueTickets = supportCount || 0;
       
       const balance = profiles?.reduce((sum, p) => sum + Number(p.total_balance || 0), 0) || 0;
-      setStats({ users: users || 0, balance, transactions: txs || 0, recon: recon || 0, subs: subs || 0, tickets: uniqueTickets });
+      setStats({ users: users || 0, balance, transactions: txs || 0, recon: recon || 0, subs: subs || 0, tickets: uniqueTickets, pending_kyc: pendingKyc || 0, pending_nda: pendingNda || 0 });
     };
     loadStats();
     
@@ -41,9 +43,10 @@ export default function AdminOverview() {
 
   const dynamicStats = [
     { label: 'Total Users', value: stats.users.toLocaleString(), change: 'Registered', icon: Users, color: 'text-blue-500', bg: 'bg-blue-100' },
-    { label: 'Pending Recon', value: stats.recon.toLocaleString(), change: 'Require review', icon: ShieldAlert, color: 'text-orange-500', bg: 'bg-orange-100' },
-    { label: 'Active Subs', value: stats.subs.toLocaleString(), change: 'Pro & Enterprise', icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-100' },
-    { label: 'Open Tickets', value: stats.tickets.toLocaleString(), change: 'Active threads', icon: Clock, color: 'text-red-500', bg: 'bg-red-100' },
+    { label: 'Pending KYC', value: stats.pending_kyc.toLocaleString(), change: 'Awaiting approval', icon: ShieldAlert, color: 'text-yellow-600', bg: 'bg-yellow-100', link: '/admin/kyc' },
+    { label: 'Pending NDA', value: stats.pending_nda.toLocaleString(), change: 'Awaiting review', icon: FileText, color: 'text-purple-600', bg: 'bg-purple-100', link: '/admin/kyc' },
+    { label: 'Pending Recon', value: stats.recon.toLocaleString(), change: 'Require review', icon: ShieldAlert, color: 'text-orange-500', bg: 'bg-orange-100', link: '/admin/users' },
+    { label: 'Open Tickets', value: stats.tickets.toLocaleString(), change: 'Active threads', icon: Clock, color: 'text-red-500', bg: 'bg-red-100', link: '/admin/support' },
   ];
 
   return (
@@ -55,14 +58,14 @@ export default function AdminOverview() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {dynamicStats.map((stat, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+          <Link to={stat.link || '#'} key={i} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-brand-purple transition-colors block">
             <div className={`w-10 h-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center mb-4`}>
               <stat.icon size={20} />
             </div>
             <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-1">{stat.label}</p>
             <p className="text-3xl font-display font-bold text-brand-dark mb-2">{stat.value}</p>
             <p className="text-xs font-bold text-gray-400">{stat.change}</p>
-          </div>
+          </Link>
         ))}
       </div>
 

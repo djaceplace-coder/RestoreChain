@@ -62,7 +62,7 @@ export default function Agreement() {
       const { error: docError } = await supabase.from('user_documents').insert({
         user_id: user.id,
         document_type: 'terms_agreement',
-        file_url: signatureData,
+        signature_data: signatureData,
         status: 'pending'
       });
 
