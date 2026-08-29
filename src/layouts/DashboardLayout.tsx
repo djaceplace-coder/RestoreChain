@@ -41,6 +41,7 @@ export default function DashboardLayout() {
   const [reconCount, setReconCount] = useState(0);
   const [isKYCModalOpen, setIsKYCModalOpen] = useState(false);
   const [hasSkippedKYC, setHasSkippedKYC] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
     if (mainRef.current) {
@@ -91,6 +92,7 @@ export default function DashboardLayout() {
       
       const { count } = await supabase.from('reconciliation_issues').select('*', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('status', 'open');
       setReconCount(count || 0);
+      setIsAuthLoading(false);
     } else {
       navigate('/login');
     }
@@ -120,6 +122,10 @@ export default function DashboardLayout() {
       sessionStorage.setItem('kyc_skipped', 'true');
     }
   };
+  if (isAuthLoading) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-brand-purple border-t-transparent rounded-full animate-spin"></div></div>;
+  }
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
       {/* Mobile menu overlay */}

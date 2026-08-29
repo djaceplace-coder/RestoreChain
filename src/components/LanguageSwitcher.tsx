@@ -34,7 +34,10 @@ export default function LanguageSwitcher({ isDark = false }) {
         const { data } = await supabase.from('profiles').select('preferred_language').eq('id', session.user.id).single();
         if (data?.preferred_language && data.preferred_language !== lang) {
            lang = data.preferred_language;
-           applyLanguage(lang, false); // apply without db update to avoid loop
+           if (!sessionStorage.getItem('lang_synced')) {
+             sessionStorage.setItem('lang_synced', 'true');
+             applyLanguage(lang, false, true); 
+           }
         }
       }
       setCurrentLang(lang);
@@ -43,7 +46,7 @@ export default function LanguageSwitcher({ isDark = false }) {
     syncUserLang();
   }, []);
 
-  const applyLanguage = async (langCode: string, updateDb = true) => {
+  const applyLanguage = async (langCode: string, updateDb = true, shouldReload = true) => {
     setCurrentLang(langCode);
     setIsOpen(false);
     
@@ -51,8 +54,8 @@ export default function LanguageSwitcher({ isDark = false }) {
       document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
       document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${window.location.hostname}; path=/;`;
     } else {
-      document.cookie = `googtrans=/en/${langCode}; path=/; SameSite=None; Secure`;
-      document.cookie = `googtrans=/en/${langCode}; domain=${window.location.hostname}; path=/; SameSite=None; Secure`;
+      document.cookie = `googtrans=/en/${langCode}; path=/`;
+      document.cookie = `googtrans=/en/${langCode}; domain=${window.location.hostname}; path=/`;
     }
 
     if (updateDb) {
@@ -64,7 +67,7 @@ export default function LanguageSwitcher({ isDark = false }) {
        }
     }
 
-    window.location.reload();
+    if (shouldReload) window.location.reload();
   };
 
   return (

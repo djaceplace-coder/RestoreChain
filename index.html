@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  </head>
+    </head>
   <body class="antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
@@ -24,14 +24,25 @@
       function googleTranslateElementInit() {
         new google.translate.TranslateElement({pageLanguage: "en", autoDisplay: false}, "google_translate_element");
       }
+      (function() {
+        if (document.cookie.indexOf('googtrans=') !== -1) {
+          var gt = document.createElement('script');
+          gt.type = 'text/javascript';
+          gt.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+          document.head.appendChild(gt);
+        }
+      })();
     </script>
-    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
     <style>
+      body { top: 0px !important; position: static !important; }
       .goog-te-banner-frame { display: none !important; }
-      body { top: 0px !important; }
+      .skiptranslate > iframe.goog-te-banner-frame { display: none !important; }
+      #goog-gt-tt { display: none !important; }
       .goog-tooltip { display: none !important; }
       .goog-tooltip:hover { display: none !important; }
       .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+      /* Ensure nothing shifts the body down */
+      html { height: 100%; }
     </style>
   </body>
 </html>
