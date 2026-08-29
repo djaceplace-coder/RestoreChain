@@ -80,8 +80,6 @@ export default function Portfolio() {
         
       if (profile) {
         setUserProfile(profile);
-        setTotalValue(Number(profile.total_balance || 0));
-        if (displayedBalance === 0) setDisplayedBalance(Number(profile.total_balance || 0));
       }
 
       // Fetch portfolios (try portfolios table, fallback to assets table)
@@ -125,6 +123,29 @@ export default function Portfolio() {
 
   return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  // Recalculate base balance whenever coins or portfolio update
+  useEffect(() => {
+    if (!userProfile) return;
+    const fiat = Number(userProfile.fiat_balance || 0);
+    
+    // Calculate live crypto value
+    const cryptoUsdValue = assets.reduce((sum, asset) => {
+      const liveRateData = liveRates.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
+      const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (asset.value / (Number(asset.balance) || 0)) : 0);
+      return sum + (livePrice * (Number(asset.balance) || 0));
+    }, 0);
+
+    const liveTotal = fiat + cryptoUsdValue;
+    setTotalValue(liveTotal);
+    
+    setDisplayedBalance(prev => {
+      if (prev === 0 || Math.abs(prev - liveTotal) > (liveTotal * 0.05)) {
+        return liveTotal;
+      }
+      return prev;
+    });
+  }, [userProfile, assets, liveRates]);
 
   
   useEffect(() => {
@@ -203,9 +224,9 @@ export default function Portfolio() {
           {(() => {
             const btcPrice = liveRates.find(r => r.symbol === 'BTC')?.price || 64000;
             const cryptoUsdValue = assets.reduce((sum, asset) => {
-              const liveRateData = liveRates.find((r: any) => r.symbol.toUpperCase() === asset.symbol.toUpperCase());
-              const livePrice = liveRateData ? liveRateData.price : (asset.balance > 0 ? (asset.value / asset.balance) : 0);
-              return sum + (livePrice * asset.balance);
+              const liveRateData = liveRates.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
+              const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (asset.value / (Number(asset.balance) || 0)) : 0);
+              return sum + (livePrice * (Number(asset.balance) || 0));
             }, 0);
             const btcEquivalent = cryptoUsdValue / btcPrice;
             
@@ -299,9 +320,9 @@ export default function Portfolio() {
               </thead>
                             <tbody className="divide-y divide-gray-100">
                 {assets.map((asset) => {
-                  const liveRateData = liveRates.find((r: any) => r.symbol.toUpperCase() === asset.symbol.toUpperCase());
-                  const livePrice = liveRateData ? liveRateData.price : (asset.balance > 0 ? (asset.value / asset.balance) : 0);
-                  const liveValue = livePrice * asset.balance;
+                  const liveRateData = liveRates.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
+                  const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (asset.value / (Number(asset.balance) || 0)) : 0);
+                  const liveValue = livePrice * (Number(asset.balance) || 0);
                   
                   return (
                   <tr key={asset.id} className="hover:bg-gray-50/50 transition-colors">
@@ -315,7 +336,7 @@ export default function Portfolio() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <p className="font-bold text-brand-dark">{asset.balance} {asset.symbol}</p>
+                      <p className="font-bold text-brand-dark">{(Number(asset.balance) || 0)} {asset.symbol}</p>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <p className="font-medium text-brand-dark">${Number(livePrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>

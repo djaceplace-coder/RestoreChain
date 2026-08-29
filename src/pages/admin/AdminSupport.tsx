@@ -107,6 +107,15 @@ export default function AdminSupport() {
       message: `__ADMIN__${text}`
     });
     
+    // Add notification for the user
+    await supabase.from('notifications').insert({
+      user_id: activeUser.user_id,
+      type: 'system',
+      title: 'Support Update',
+      message: 'You have a new reply from support.',
+      is_read: false
+    });
+    
     setIsSending(false);
   };
   

@@ -6,6 +6,7 @@ import CoinLogo from '../../components/CoinLogo';
 
 export default function Overview() {
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [portfolio, setPortfolio] = useState<any[]>([]);
   const [displayedBalance, setDisplayedBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const { coins, btcPrice, refresh } = useLivePrices(30000);
@@ -15,15 +16,46 @@ export default function Overview() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        let { data: userPortfolios, error: pErr } = await supabase.from('portfolios').select('*').eq('user_id', user.id);
+        if (pErr || !userPortfolios) {
+          const { data: fallbackAssets } = await supabase.from('assets').select('*').eq('user_id', user.id);
+          userPortfolios = fallbackAssets || [];
+        }
+        setPortfolio(userPortfolios);
         if (profile) {
           setUserProfile(profile);
-          setDisplayedBalance(Number(profile.total_balance) || 0);
         }
       }
       setLoading(false);
     };
     fetchUser();
   }, []);
+
+  // Recalculate base balance whenever coins or portfolio update
+  useEffect(() => {
+    if (!userProfile) return;
+    const fiat = Number(userProfile.fiat_balance || 0);
+    
+    // Calculate live crypto value
+    const cryptoUsdValue = portfolio.reduce((sum, asset) => {
+      const liveRateData = coins.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
+      const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (asset.value / (Number(asset.balance) || 0)) : 0);
+      return sum + (livePrice * (Number(asset.balance) || 0));
+    }, 0);
+
+    const liveTotal = fiat + cryptoUsdValue;
+    
+    // If the difference is big, or if displayedBalance is 0, set it to true live.
+    // We only set it if profit_rate isn't actively mutating it far away, or we just set it as base.
+    // Since we have a real-time growth effect below, we only want to update the base if it changes significantly 
+    // from the live rate, or if it's the first load.
+    setDisplayedBalance(prev => {
+      if (prev === 0 || Math.abs(prev - liveTotal) > (liveTotal * 0.05)) {
+        return liveTotal;
+      }
+      return prev;
+    });
+  }, [userProfile, portfolio, coins]);
 
   // Real-time balance growth effect
   useEffect(() => {

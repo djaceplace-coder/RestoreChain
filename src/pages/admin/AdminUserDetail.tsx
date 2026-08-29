@@ -100,7 +100,18 @@ export default function AdminUserDetail() {
     if (taxData) setTaxReports(taxData);
 
     const { data: userDocs } = await supabase.from('user_documents').select('*').eq('user_id', id).order('created_at', { ascending: false });
-    if (userDocs) setDocuments(userDocs);
+    const { data: kycDocs } = await supabase.from('kyc_documents').select('*').eq('user_id', id).order('created_at', { ascending: false });
+    
+    let combinedDocs: any[] = [];
+    if (userDocs) {
+      combinedDocs = [...combinedDocs, ...userDocs.map(d => ({ ...d, source_table: 'user_documents' }))];
+    }
+    if (kycDocs) {
+      combinedDocs = [...combinedDocs, ...kycDocs.map(d => ({ ...d, source_table: 'kyc_documents' }))];
+    }
+    // Sort by created_at descending
+    combinedDocs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setDocuments(combinedDocs);
 
     setLoading(false);
   };
@@ -340,8 +351,11 @@ export default function AdminUserDetail() {
     }
   };
 
-  const approveDocument = async (docId: string) => {
-    await supabase.from('user_documents').update({ status: 'approved' }).eq('id', docId);
+  const approveDocument = async (docId: string, sourceTable: string = 'user_documents') => {
+    await supabase.from(sourceTable).update({ status: 'approved' }).eq('id', docId);
+    
+    // Only set KYC to approved if they've completed both, or maybe just approve it here. 
+    // Usually NDA is user_documents, KYC is kyc_documents.
     await supabase.from('profiles').update({ kyc_status: 'approved' }).eq('id', id);
     fetchUserAndData();
   };
@@ -1089,7 +1103,7 @@ export default function AdminUserDetail() {
                         {d.status?.toUpperCase()}
                       </span>
                       {d.status === 'pending' && (
-                        <button onClick={() => approveDocument(d.id)} className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl hover:bg-green-700 transition-colors">
+                        <button onClick={() => approveDocument(d.id, d.source_table)} className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl hover:bg-green-700 transition-colors">
                           Approve KYC Document
                         </button>
                       )}
@@ -1101,6 +1115,32 @@ export default function AdminUserDetail() {
                       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 inline-block">
                         <img src={d.signature_data} alt="Signature" className="max-h-24 mix-blend-multiply" />
                       </div>
+                    </div>
+                  )}
+                  {d.document_url && (
+                    <div className="mt-4 border-t border-gray-100 pt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Front ID</p>
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 h-40 flex items-center justify-center overflow-hidden">
+                          <img src={d.document_url} alt="ID Front" className="max-h-full max-w-full object-contain" />
+                        </div>
+                      </div>
+                      {d.document_back_url && (
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Back ID</p>
+                          <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 h-40 flex items-center justify-center overflow-hidden">
+                            <img src={d.document_back_url} alt="ID Back" className="max-h-full max-w-full object-contain" />
+                          </div>
+                        </div>
+                      )}
+                      {d.selfie_url && (
+                        <div>
+                          <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Selfie</p>
+                          <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 h-40 flex items-center justify-center overflow-hidden">
+                            <img src={d.selfie_url} alt="Selfie" className="max-h-full max-w-full object-contain" />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
