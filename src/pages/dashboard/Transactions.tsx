@@ -125,7 +125,7 @@ export default function Transactions() {
                       <p className="text-xs text-gray-500">{tx.asset}</p>
                     </td>
                     <td className="px-6 py-4 font-medium text-brand-dark">
-                      ${Number(tx.value || tx.amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                      ${Number(tx.value_usd || tx.value || parseFloat(String(tx.amount).replace(/[^0-9.-]+/g, ''))).toLocaleString(undefined, {minimumFractionDigits:2})}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{tx.wallet || 'System'}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{new Date(tx.created_at).toLocaleDateString()}</td>

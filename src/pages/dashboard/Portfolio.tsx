@@ -115,6 +115,7 @@ export default function Portfolio() {
 
     const channel = supabase.channel('portfolio_changes-' + Date.now())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'portfolios', filter: `user_id=eq.${user.id}` }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assets', filter: `user_id=eq.${user.id}` }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` }, fetchData)
       .subscribe();
@@ -125,6 +126,8 @@ export default function Portfolio() {
   }, [user]);
 
   // Recalculate base balance whenever coins or portfolio update
+  const prevBaseRef = React.useRef(0);
+  
   useEffect(() => {
     if (!userProfile) return;
     const fiat = Number(userProfile.fiat_balance || 0);
@@ -139,10 +142,21 @@ export default function Portfolio() {
     const liveTotal = fiat + cryptoUsdValue;
     setTotalValue(liveTotal);
     
+    // Compute a purely structural base value to detect real admin/user deposits (ignoring price fluctuations)
+    const structuralBase = fiat + assets.reduce((sum, a) => sum + Number(a.balance || 0), 0);
+    
     setDisplayedBalance(prev => {
+      // If the structural base has changed (meaning real assets were added/removed), force update
+      if (prevBaseRef.current !== structuralBase) {
+        prevBaseRef.current = structuralBase;
+        return liveTotal;
+      }
+      
+      // Otherwise, only update if the liveTotal deviates by more than 5% (to preserve fake growth ticks)
       if (prev === 0 || Math.abs(prev - liveTotal) > (liveTotal * 0.05)) {
         return liveTotal;
       }
+      
       return prev;
     });
   }, [userProfile, assets, liveRates]);

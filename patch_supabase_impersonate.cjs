@@ -1,17 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+const fs = require('fs');
+let content = fs.readFileSync('src/lib/supabase.ts', 'utf8');
 
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || '';
-const supabaseKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '';
-
-// Create a single supabase client for interacting with your database
-export const supabase = supabaseUrl && supabaseKey 
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
-
-export const isSupabaseConfigured = () => {
-  return !!supabase;
-};
-
+if (!content.includes('impersonated_user_id')) {
+content += `
 if (supabase) {
   const originalGetUser = supabase.auth.getUser.bind(supabase.auth);
   supabase.auth.getUser = async (...args) => {
@@ -30,4 +21,8 @@ if (supabase) {
     }
     return originalGetSession(...args);
   };
+}
+`;
+  fs.writeFileSync('src/lib/supabase.ts', content);
+  console.log('patched supabase.ts');
 }

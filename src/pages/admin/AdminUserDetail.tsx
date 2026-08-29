@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
-  ArrowLeft, Wallet, History, Activity, Receipt, MessageSquare, 
+  Eye, ArrowLeft, Wallet, History, Activity, Receipt, MessageSquare, 
   ShieldAlert, Loader2, CheckCircle, Bitcoin, DollarSign, 
   TrendingUp, RefreshCw, FileText, ArrowRight, Check,
   PlusCircle, MinusCircle
@@ -425,9 +425,20 @@ export default function AdminUserDetail() {
             </span>
           </div>
 
-          <p className="text-gray-500 text-sm font-mono">
+          <p className="text-gray-500 text-sm font-mono mb-3">
             {user.email} • ID: {id} • Joined: {new Date(user.created_at).toLocaleDateString()}
           </p>
+          <button 
+            onClick={() => {
+              sessionStorage.setItem('impersonated_user_id', user.id);
+              sessionStorage.setItem('impersonated_user_email', user.email);
+              window.location.href = '#/dashboard';
+              window.location.reload();
+            }}
+            className="px-4 py-2 bg-brand-purple text-white font-bold rounded-xl text-sm hover:bg-purple-700 transition-colors shadow-sm inline-flex items-center gap-2"
+          >
+            <Eye size={16} /> Impersonate (View Dashboard)
+          </button>
         </div>
 
         {/* Live Total & BTC Equivalent Card */}
