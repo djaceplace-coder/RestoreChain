@@ -4,7 +4,7 @@ import {
   Eye, ArrowLeft, Wallet, History, Activity, Receipt, MessageSquare, 
   ShieldAlert, Loader2, CheckCircle, Bitcoin, DollarSign, 
   TrendingUp, RefreshCw, FileText, ArrowRight, Check,
-  PlusCircle, MinusCircle
+  PlusCircle, MinusCircle, Trash2
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useLivePrices } from '../../hooks/useLivePrices';
@@ -336,6 +336,26 @@ export default function AdminUserDetail() {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!window.confirm("Are you SURE you want to completely delete this user and all associated data? This cannot be undone.")) return;
+    
+    const { error } = await supabase.rpc('admin_delete_user', { target_user_id: id });
+    if (error) {
+      // Fallback: Delete profile only
+      console.warn(error);
+      const { error: profileErr } = await supabase.from('profiles').delete().eq('id', id);
+      if (profileErr) {
+         alert("Failed to delete user: " + profileErr.message);
+      } else {
+         alert("User profile deleted. (Run the SQL script to fully remove auth record).");
+         window.location.href = '#/admin/users';
+      }
+    } else {
+      alert("User account completely deleted.");
+      window.location.href = '#/admin/users';
+    }
+  };
+
   const resolveReconIssue = async (issueId: string) => {
     await supabase.from('reconciliation_issues').update({ status: 'resolved' }).eq('id', issueId);
     fetchUserAndData();
@@ -455,15 +475,10 @@ export default function AdminUserDetail() {
             <ShieldAlert size={16} /> {user?.is_frozen ? 'Unfreeze Account' : 'Freeze Account'}
           </button>
           <button 
-            onClick={() => {
-              sessionStorage.setItem('impersonated_user_id', user.id);
-              sessionStorage.setItem('impersonated_user_email', user.email);
-              window.location.href = '#/dashboard';
-              window.location.reload();
-            }}
-            className="px-4 py-2 bg-brand-purple text-white font-bold rounded-xl text-sm hover:bg-purple-700 transition-colors shadow-sm inline-flex items-center gap-2"
+            onClick={handleDeleteUser}
+            className="px-4 py-2 bg-red-100 text-red-600 font-bold rounded-xl text-sm hover:bg-red-600 hover:text-white transition-colors shadow-sm inline-flex items-center gap-2"
           >
-            <Eye size={16} /> Impersonate (View Dashboard)
+            <Trash2 size={16} /> Delete Account
           </button>
         </div>
 

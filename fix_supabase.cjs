@@ -1,4 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+const fs = require('fs');
+let content = `import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || '';
 const supabaseKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '';
@@ -11,3 +12,6 @@ export const supabase = supabaseUrl && supabaseKey
 export const isSupabaseConfigured = () => {
   return !!supabase;
 };
+`;
+fs.writeFileSync('src/lib/supabase.ts', content);
+console.log("Updated supabase.ts");
