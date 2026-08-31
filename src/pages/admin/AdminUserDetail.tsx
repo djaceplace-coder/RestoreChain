@@ -199,111 +199,52 @@ export default function AdminUserDetail() {
   const handleSystemUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setUpdateStatus(`Executing balance ${txAction === 'credit' ? 'provisioning' : 'deduction'}...`);
+    setUpdateStatus(`Executing balance ${txAction}...`);
 
     try {
       const finalUsdAmount = parseFloat(usdAmount) || 0;
       const finalCryptoQty = parseFloat(cryptoAmount) || 0;
       const assetSymbol = provisionMode === 'crypto' ? selectedAsset.toUpperCase() : (user?.preferred_currency || 'USD');
-      const formattedDate = txDate ? new Date(txDate).toISOString() : new Date().toISOString();
 
-      if (finalUsdAmount <= 0) {
+      if (finalUsdAmount <= 0 && txAction !== 'clear') {
         throw new Error('Please enter a valid balance amount greater than 0.');
       }
 
-      const currentTotal = Number(user?.total_balance) || 0;
-      const valSign = txAction === 'credit' ? 1 : -1;
-      const newTotalBalance = Math.max(0, currentTotal + (finalUsdAmount * valSign));
+      const { data: adminUser } = await supabase.auth.getUser();
+      if (!adminUser.user) throw new Error("Admin not authenticated");
 
-      // 1. Update Profile Balance
-      const profileUpdates: any = { total_balance: newTotalBalance };
-      if (provisionMode === 'fiat') {
-        const currentFiat = Number(user?.fiat_balance) || 0;
-        profileUpdates.fiat_balance = Math.max(0, currentFiat + (finalUsdAmount * valSign));
-      }
-      const { error: profErr } = await supabase.from('profiles').update(profileUpdates).eq('id', id);
-      if (profErr) throw profErr;
-
-      // 2. Manage Portfolio Asset (BTC / Crypto)
-      if (provisionMode === 'crypto') {
-        const qtyToChange = finalCryptoQty > 0 ? finalCryptoQty : (finalUsdAmount / (getPrice(assetSymbol) || btcPrice || 1));
-        
-        // Check existing portfolios
-        let { data: existingPortfolios } = await supabase
-          .from('portfolios')
-          .select('*')
-          .eq('user_id', id)
-          .eq('symbol', assetSymbol);
-
-        let existing = existingPortfolios?.[0];
-        let targetTable = 'portfolios';
-
-        if (!existing) {
-          const { data: fallbackAssets } = await supabase
-            .from('assets')
-            .select('*')
-            .eq('user_id', id)
-            .eq('symbol', assetSymbol);
-          if (fallbackAssets && fallbackAssets.length > 0) {
-            existing = fallbackAssets[0];
-            targetTable = 'assets';
-          }
-        }
-
-        if (existing) {
-          await supabase.from(targetTable).update({
-            balance: Math.max(0, Number(existing.balance || 0) + (qtyToChange * valSign)),
-            value: Math.max(0, Number(existing.value || 0) + (finalUsdAmount * valSign)),
-          }).eq('id', existing.id);
-        } else if (txAction === 'credit') {
-          // Insert new asset into portfolios only if crediting
-          const assetName = assetSymbol === 'BTC' ? 'Bitcoin' : assetSymbol === 'ETH' ? 'Ethereum' : assetSymbol === 'SOL' ? 'Solana' : assetSymbol;
-          await supabase.from('portfolios').insert({
-            user_id: id,
-            name: assetName,
-            symbol: assetSymbol,
-            balance: qtyToChange,
-            value: finalUsdAmount,
-            color: assetSymbol === 'BTC' ? 'bg-orange-500' : 'bg-blue-500',
-          });
-        }
-      }
-
-      // 3. Create Transaction Ledger Record
-      const txDisplayAmount = provisionMode === 'crypto' 
-        ? `${finalCryptoQty || (finalUsdAmount / btcPrice).toFixed(6)} ${assetSymbol}` 
-        : `$${finalUsdAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-
-      // Include reason in status if deduction
-      const txStatus = txAction === 'debit' ? `completed - ${deductionReason}` : 'completed';
-
-      await supabase.from('transactions').insert({
-        user_id: id,
-        type: txAction === 'credit' ? 'deposit' : 'withdrawal',
-        amount: (txAction === 'debit' ? '-' : '+') + txDisplayAmount,
-        value_usd: finalUsdAmount,
-        asset: assetSymbol,
-        status: txStatus,
-        created_at: formattedDate,
+      // Call the streamlined SQL RPC function
+      const { data, error } = await supabase.rpc('admin_update_balance', {
+        p_admin_id: adminUser.user.id,
+        p_user_id: id,
+        p_action: txAction, // 'credit', 'debit', 'set', 'clear'
+        p_usd_amount: finalUsdAmount,
+        p_asset: assetSymbol,
+        p_crypto_qty: finalCryptoQty,
+        p_reason: deductionReason || `Admin ${txAction} via dashboard`
       });
 
-      // 4. Create Push Notification
-      await supabase.from('notifications').insert({
-        user_id: id,
-        type: 'system',
-        title: messageTitle || `${assetSymbol} Balance ${txAction === 'credit' ? 'Added' : 'Deducted'}`,
-        message: messageBody || `Your account balance was ${txAction === 'credit' ? 'credited with' : 'deducted by'} ${txDisplayAmount}.`,
-        is_read: false,
-        created_at: formattedDate,
-      });
+      if (error) throw error;
 
-      setUpdateStatus(`Success! ${txAction === 'credit' ? 'Credited' : 'Deducted'} ${txDisplayAmount} ($${finalUsdAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}) ${txAction === 'credit' ? 'to' : 'from'} ${user?.first_name || 'User'}.`);
-      setCryptoAmount('');
-      setUsdAmount('');
-      await fetchUserAndData();
+      setUpdateStatus(`Success! Balance ${txAction} executed successfully.`);
+      
+      // Refresh user profile
+      fetchUser();
+      
+      setTimeout(() => {
+        setUpdateStatus('');
+        setUsdAmount('');
+        setCryptoAmount('');
+        setDeductionReason('');
+      }, 3000);
     } catch (err: any) {
-      console.error('System Update Error:', err);
-      setUpdateStatus(`Error: ${err.message || 'Failed to update balance'}`);
+      console.error("System Update Error:", err);
+      if (err.message && err.message.includes('function admin_update_balance does not exist')) {
+        alert("CRITICAL ERROR: The database function 'admin_update_balance' is missing! You MUST run the provided SQL script in your Supabase SQL Editor to enable balance updates.");
+      } else {
+        alert("System Update Error: " + err.message);
+      }
+      setUpdateStatus(`Error: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
