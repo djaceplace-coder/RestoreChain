@@ -34,6 +34,7 @@ export default function AdminUserDetail() {
   const [selectedAsset, setSelectedAsset] = useState('BTC');
   const [cryptoAmount, setCryptoAmount] = useState('');
   const [usdAmount, setUsdAmount] = useState('');
+  const [fiatProvisionAmount, setFiatProvisionAmount] = useState('');
   const [messageTitle, setMessageTitle] = useState('Bitcoin Balance Credited');
   const [messageBody, setMessageBody] = useState('Your portfolio has been credited with new asset holdings.');
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 16));
@@ -217,23 +218,28 @@ export default function AdminUserDetail() {
     }
   };
 
-  const handleSimpleSystemUpdate = async (action: 'add' | 'deduct' | 'clear') => {
+  const handleBalanceProvisioning = async (balanceType: 'crypto' | 'fiat', action: 'add' | 'deduct' | 'clear') => {
     setIsSubmitting(true);
-    setUpdateStatus(`Executing balance ${action}...`);
+    setUpdateStatus(`Executing ${balanceType} ${action}...`);
 
     try {
-      const finalUsdAmount = parseFloat(usdAmount) || 0;
-      const finalBtcAmount = parseFloat(cryptoAmount) || 0;
+      const finalFiat = parseFloat(fiatProvisionAmount) || 0;
+      const finalUsdEquivalent = parseFloat(usdAmount) || 0;
+      const finalBtc = parseFloat(cryptoAmount) || 0;
 
-      if ((finalUsdAmount <= 0 && finalBtcAmount <= 0) && action !== 'clear') {
-        throw new Error('Please enter a valid amount greater than 0.');
+      if (action !== 'clear') {
+        if (balanceType === 'crypto' && finalBtc <= 0) throw new Error('Please enter a valid crypto amount.');
+        if (balanceType === 'fiat' && finalFiat <= 0) throw new Error('Please enter a valid fiat amount.');
       }
 
-      const { error } = await supabase.rpc('admin_update_user_balance', {
+      const p_amount = balanceType === 'crypto' ? finalBtc : finalFiat;
+
+      const { error } = await supabase.rpc('admin_update_user_balance_v2', {
         p_user_id: id,
         p_action: action,
-        p_usd_amount: finalUsdAmount,
-        p_btc_amount: finalBtcAmount,
+        p_balance_type: balanceType,
+        p_amount: p_amount,
+        p_fiat_value_for_crypto: finalUsdEquivalent,
         p_tx_date: txDate,
         p_narration: deductionReason || 'System Update'
       });
@@ -242,27 +248,28 @@ export default function AdminUserDetail() {
         throw error;
       }
 
-      setUpdateStatus(`Success! Balance ${action} executed successfully.`);
+      setUpdateStatus(`Success! ${balanceType.toUpperCase()} ${action} executed successfully.`);
       
       // Clear inputs
-      setUsdAmount('');
-      setCryptoAmount('');
+      if (balanceType === 'crypto') {
+        setUsdAmount('');
+        setCryptoAmount('');
+      } else {
+        setFiatProvisionAmount('');
+      }
       
-      // Refresh user profile
       fetchUserAndData();
       
       setTimeout(() => {
         setUpdateStatus('');
-      }, 3000);
+      }, 4000);
       
     } catch (err: any) {
-      alert(err.message);
-      setUpdateStatus('');
+      setUpdateStatus(`Error: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
-
 
   
   const pushReconIssue = async (e: React.FormEvent) => {
@@ -487,12 +494,12 @@ const resolveReconIssue = async (issueId: string) => {
         {/* TAB 1: SYSTEM UPDATE & DIRECT BTC BALANCE PROVISIONING   */}
         {/* ========================================================= */}
         {activeTab === 'system' && (
-          <div className="animate-fade-in max-w-3xl">
+          <div className="animate-fade-in max-w-5xl">
             
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-100">
               <div>
-                <h2 className="text-xl font-bold font-display text-brand-dark">Provision Balance & System Updates</h2>
-                <p className="text-sm text-gray-500 mt-1">Directly credit or debit USD and Bitcoin holdings in real-time.</p>
+                <h2 className="text-xl font-bold font-display text-brand-dark">Provision Balances</h2>
+                <p className="text-sm text-gray-500 mt-1">Directly manage Crypto (BTC) and Personal Fiat balances independently.</p>
               </div>
 
               <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-2xl text-xs font-mono">
@@ -501,135 +508,153 @@ const resolveReconIssue = async (issueId: string) => {
               </div>
             </div>
 
-            <div className="space-y-5">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl border bg-gray-50/50 border-gray-200">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Direct USD Amount
-                  </label>
-                  <div className="relative">
+              {/* Crypto Provisioning Card */}
+              <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm relative overflow-hidden">
+                <div className="absolute -right-10 -top-10 w-40 h-40 bg-orange-50 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <h3 className="text-lg font-bold text-brand-dark mb-4 relative z-10 flex items-center gap-2">
+                  <Bitcoin size={20} className="text-orange-500" />
+                  Crypto Provisioning (BTC)
+                </h3>
+                
+                <div className="space-y-4 relative z-10">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-wider font-bold text-gray-500 mb-1">
+                        USD Equivalent
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={usdAmount}
+                        onChange={(e) => {
+                          setUsdAmount(e.target.value);
+                          if(e.target.value) {
+                             setCryptoAmount((parseFloat(e.target.value) / btcPrice).toFixed(6));
+                          } else {
+                             setCryptoAmount('');
+                          }
+                        }}
+                        placeholder="0.00"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold font-mono focus:outline-none focus:border-brand-dark"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-wider font-bold text-gray-500 mb-1">
+                        BTC Amount
+                      </label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        value={cryptoAmount}
+                        onChange={(e) => {
+                          setCryptoAmount(e.target.value);
+                          if(e.target.value) {
+                             setUsdAmount((parseFloat(e.target.value) * btcPrice).toFixed(2));
+                          } else {
+                             setUsdAmount('');
+                          }
+                        }}
+                        placeholder="0.000000"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold font-mono focus:outline-none focus:border-brand-dark"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mt-4">
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => handleBalanceProvisioning('crypto', 'add')}
+                      className="py-3 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 transition-all flex items-center justify-center gap-2 text-sm"
+                    >
+                      <PlusCircle size={16} /> Add BTC
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => handleBalanceProvisioning('crypto', 'deduct')}
+                      className="py-3 bg-gray-800 text-white font-bold rounded-xl hover:bg-gray-900 transition-all flex items-center justify-center gap-2 text-sm"
+                    >
+                      <MinusCircle size={16} /> Deduct
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => handleBalanceProvisioning('crypto', 'clear')}
+                      className="col-span-2 py-3 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-2 text-sm border border-red-100"
+                    >
+                      <Trash2 size={16} /> Clear Crypto Balance
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Balance Provisioning Card */}
+              <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm relative overflow-hidden">
+                <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-green-50 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <h3 className="text-lg font-bold text-brand-dark mb-4 relative z-10 flex items-center gap-2">
+                  <DollarSign size={20} className="text-green-600" />
+                  Personal Balance (Fiat)
+                </h3>
+                
+                <div className="space-y-4 relative z-10">
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-wider font-bold text-gray-500 mb-1">
+                      Fiat Amount (${user?.preferred_currency || 'USD'})
+                    </label>
                     <input
                       type="number"
                       step="0.01"
-                      value={usdAmount}
-                      onChange={(e) => {
-                        setUsdAmount(e.target.value);
-                        if(e.target.value) {
-                           setCryptoAmount((parseFloat(e.target.value) / btcPrice).toFixed(6));
-                        } else {
-                           setCryptoAmount('');
-                        }
-                      }}
-                      placeholder="e.g. 500.00"
-                      className="w-full pl-4 pr-16 py-3 bg-white border border-gray-200 rounded-xl text-base font-bold font-mono focus:outline-none focus:border-brand-dark focus:ring-1 focus:ring-brand-dark"
+                      value={fiatProvisionAmount}
+                      onChange={(e) => setFiatProvisionAmount(e.target.value)}
+                      placeholder="e.g. 5000.00"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold font-mono focus:outline-none focus:border-brand-dark"
                     />
-                    <div className="absolute right-0 top-0 bottom-0 px-4 flex items-center bg-gray-100 border-l border-gray-200 rounded-r-xl">
-                      <span className="text-xs font-bold text-gray-600">USD</span>
-                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Direct BTC Amount
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      step="0.000001"
-                      value={cryptoAmount}
-                      onChange={(e) => {
-                        setCryptoAmount(e.target.value);
-                        if(e.target.value) {
-                           setUsdAmount((parseFloat(e.target.value) * btcPrice).toFixed(2));
-                        } else {
-                           setUsdAmount('');
-                        }
-                      }}
-                      placeholder="e.g. 0.45"
-                      className="w-full pl-4 pr-16 py-3 bg-white border border-gray-200 rounded-xl text-base font-bold font-mono focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-                    />
-                    <div className="absolute right-0 top-0 bottom-0 px-4 flex items-center bg-orange-50 border-l border-orange-200 rounded-r-xl">
-                      <span className="text-xs font-bold text-orange-600">BTC</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Transaction Context */}
-              <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
-                <h3 className="text-sm font-bold text-brand-dark mb-4 flex items-center gap-2">
-                  <FileText size={16} className="text-blue-600" />
-                  Transaction Log Details
-                </h3>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Date & Time</label>
-                    <input
-                      type="datetime-local"
-                      value={txDate}
-                      onChange={(e) => setTxDate(e.target.value)}
-                      className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-dark"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Reason for Update (Narration)</label>
-                    <select
-                      value={deductionReason}
-                      onChange={(e) => setDeductionReason(e.target.value)}
-                      className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-dark"
+                  <div className="grid grid-cols-2 gap-2 mt-4 pt-1">
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => handleBalanceProvisioning('fiat', 'add')}
+                      className="py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-all flex items-center justify-center gap-2 text-sm"
                     >
-                      <option value="Deposit Received">Deposit Received</option>
-                      <option value="Withdrawal Processed">Withdrawal Processed</option>
-                      <option value="Trading Profit">Trading Profit</option>
-                      <option value="Network Fee Deduction">Network Fee Deduction</option>
-                      <option value="Account Adjustment">Account Adjustment</option>
-                    </select>
+                      <PlusCircle size={16} /> Fund Personal
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => handleBalanceProvisioning('fiat', 'deduct')}
+                      className="py-3 bg-gray-800 text-white font-bold rounded-xl hover:bg-gray-900 transition-all flex items-center justify-center gap-2 text-sm"
+                    >
+                      <MinusCircle size={16} /> Deduct
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => handleBalanceProvisioning('fiat', 'clear')}
+                      className="col-span-2 py-3 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-2 text-sm border border-red-100"
+                    >
+                      <Trash2 size={16} /> Clear Personal Balance
+                    </button>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => handleSimpleSystemUpdate('add')}
-                  className="w-full py-4 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 transition-all flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <PlusCircle size={18} />}
-                  Add to Balance
-                </button>
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => handleSimpleSystemUpdate('deduct')}
-                  className="w-full py-4 bg-gray-800 text-white font-bold rounded-xl hover:bg-gray-900 transition-all flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <MinusCircle size={18} />}
-                  Deduct from Balance
-                </button>
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => handleSimpleSystemUpdate('clear')}
-                  className="w-full py-4 bg-red-100 text-red-600 font-bold rounded-xl hover:bg-red-200 transition-all flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
-                  Clear All Balance
-                </button>
-              </div>
-
-              {updateStatus && (
-                <div className={`p-4 rounded-xl text-sm font-bold flex items-center gap-3 ${
-                  updateStatus.includes('Error') ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
-                }`}>
-                  {updateStatus.includes('Error') ? <ShieldAlert size={20} /> : <CheckCircle size={20} />}
-                  {updateStatus}
-                </div>
-              )}
             </div>
+
+            {updateStatus && (
+              <div className={`mt-6 p-4 rounded-xl text-sm font-bold flex items-center gap-3 ${
+                updateStatus.includes('Error') ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
+              }`}>
+                {updateStatus.includes('Error') ? <ShieldAlert size={20} /> : <CheckCircle size={20} />}
+                {updateStatus}
+              </div>
+            )}
 
             {/* Profit Rate Growth Configuration */}
             <div className="mt-10 border-t border-gray-200 pt-8">
@@ -639,38 +664,34 @@ const resolveReconIssue = async (issueId: string) => {
               </div>
               <p className="text-xs text-gray-500 mb-4">Dictates the simulated real-time annualized yield increment displayed on the user's dashboard balance.</p>
 
-              <form onSubmit={handleUpdateProfitRate} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+              <form onSubmit={handleUpdateProfitRate} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 max-w-xl">
                 <div className="flex-1">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Profit Rate Percentage (%)</label>
+                  <label className="block text-[11px] uppercase tracking-wider font-bold text-gray-500 mb-1">Profit Rate Percentage (%)</label>
                   <div className="relative">
                     <input
                       type="number"
                       step="0.01"
                       value={profitRate}
                       onChange={(e) => setProfitRate(e.target.value)}
-                      placeholder="e.g. 8.5"
-                      className="w-full pl-4 pr-8 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold font-mono focus:outline-none focus:border-brand-dark"
+                      placeholder="e.g. 15.5"
+                      className="w-full pl-4 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold font-mono focus:outline-none focus:border-brand-dark"
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">%</span>
+                    <div className="absolute right-0 top-0 bottom-0 px-3 flex items-center text-gray-400 font-bold">
+                      %
+                    </div>
                   </div>
                 </div>
-
                 <button
                   type="submit"
                   disabled={updatingProfit}
-                  className="px-6 py-3 bg-brand-purple text-white font-bold rounded-xl text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="px-6 py-3 bg-brand-dark text-white font-bold rounded-xl hover:bg-black transition-colors flex items-center justify-center min-w-[120px]"
                 >
-                  {updatingProfit ? <Loader2 size={16} className="animate-spin" /> : null}
-                  Save Profit Rate
+                  {updatingProfit ? <Loader2 size={16} className="animate-spin" /> : 'Set Rate'}
                 </button>
               </form>
-
-              {profitSuccessMsg && (
-                <div className="mt-3 text-xs font-bold text-green-600 flex items-center gap-1.5">
-                  <CheckCircle size={14} /> {profitSuccessMsg}
-                </div>
-              )}
+              {profitSuccessMsg && <p className="text-green-600 text-sm font-bold mt-3 flex items-center gap-1.5"><CheckCircle size={14}/> {profitSuccessMsg}</p>}
             </div>
+
           </div>
         )}
 

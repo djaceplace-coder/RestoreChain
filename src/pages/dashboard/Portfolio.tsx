@@ -252,18 +252,18 @@ export default function Portfolio() {
                   {showBalance ? `${liveBtcEquivalent.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 })} BTC` : '•••••••• BTC'}
                 </div>
                 <div className="text-sm font-bold text-gray-500 mb-3">
-                  {showBalance ? `≈ ${liveCryptoUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '≈ $••••••••'}
+                  {showBalance ? `≈ ${getCurrencySymbol(userProfile?.preferred_currency)}${liveCryptoUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `≈ ${getCurrencySymbol(userProfile?.preferred_currency)}••••••••`}
                 </div>
               </div>
             );
           })()}
         </div>
 
-        {/* Fiat Balance */}
+        {/* Personal Balance */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group">
           <div className="absolute -right-6 -top-6 w-24 h-24 bg-green-100 rounded-full blur-2xl group-hover:bg-green-200 transition-colors pointer-events-none"></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Fiat Balance</h2>
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Personal Balance</h2>
             <Link to="/dashboard/swap" className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-purple text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-colors shadow-sm">
               <Repeat size={14} /> Swap
             </Link>

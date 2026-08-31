@@ -1,1 +1,0 @@
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS profit_rate NUMERIC DEFAULT 0;
