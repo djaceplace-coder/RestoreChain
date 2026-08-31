@@ -1,9 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseKey);
+
 async function run() {
-  const { data, error } = await supabase.from('profiles').select('*');
-  console.log(data);
+  const { data, error } = await supabase.from('profiles').select('id, role').eq('role', 'admin');
+  console.log("Admins:", data);
 }
 run();
