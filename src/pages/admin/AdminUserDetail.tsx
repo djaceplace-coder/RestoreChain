@@ -197,6 +197,26 @@ export default function AdminUserDetail() {
   };
 
   
+  const handleDeleteUser = async () => {
+    if (!window.confirm("Are you SURE you want to completely delete this user and all associated data? This cannot be undone.")) return;
+    
+    const { error } = await supabase.rpc('admin_delete_user', { target_user_id: id });
+    if (error) {
+      // Fallback: Delete profile only
+      console.warn(error);
+      const { error: profileErr } = await supabase.from('profiles').delete().eq('id', id);
+      if (profileErr) {
+         alert("Failed to delete user: " + profileErr.message);
+      } else {
+         alert("User profile deleted. (Run the SQL script to fully remove auth record).");
+         window.location.href = '#/admin/users';
+      }
+    } else {
+      alert("User account completely deleted.");
+      window.location.href = '#/admin/users';
+    }
+  };
+
   const handleSimpleSystemUpdate = async (action: 'add' | 'deduct' | 'clear') => {
     setIsSubmitting(true);
     setUpdateStatus(`Executing balance ${action}...`);
@@ -244,7 +264,30 @@ export default function AdminUserDetail() {
   };
 
 
-  const resolveReconIssue = async (issueId: string) => {
+  
+  const pushReconIssue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReconStatus('Submitting...');
+    
+    const { error } = await supabase.from('reconciliation_issues').insert({
+      user_id: id,
+      issue_type: reconType,
+      issue_desc: reconDesc,
+      amount: reconAmount,
+      asset: reconAsset,
+      status: 'open'
+    });
+
+    if (error) {
+      setReconStatus('Error: ' + error.message);
+    } else {
+      setReconStatus('Issue pushed successfully.');
+      fetchUserAndData();
+      setTimeout(() => setReconStatus(''), 3000);
+    }
+  };
+
+const resolveReconIssue = async (issueId: string) => {
     await supabase.from('reconciliation_issues').update({ status: 'resolved' }).eq('id', issueId);
     fetchUserAndData();
   };
