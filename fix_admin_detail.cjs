@@ -1,77 +1,113 @@
 const fs = require('fs');
+
 let content = fs.readFileSync('src/pages/admin/AdminUserDetail.tsx', 'utf8');
 
-// Add user_documents fetch logic
-content = content.replace(
-  `const [nfts, setNfts] = useState<any[]>([]);`,
-  `const [nfts, setNfts] = useState<any[]>([]);\n  const [documents, setDocuments] = useState<any[]>([]);`
-);
+// Replace the RPC call with a direct implementation
+const oldFunction = `      const { data, error } = await supabase.rpc('admin_update_balance', {
+        p_admin_id: adminUser.user.id,
+        p_user_id: id,
+        p_action: txAction, // 'credit', 'debit', 'set', 'clear'
+        p_usd_amount: finalUsdAmount,
+        p_asset: assetSymbol,
+        p_crypto_qty: finalCryptoQty,
+        p_reason: deductionReason || \`Admin \${txAction} via dashboard\`
+      });
 
-content = content.replace(
-  `      // Fetch NFTs\n      const { data: userNfts } = await supabase.from('nfts').select('*').eq('user_id', id);\n      if (userNfts) setNfts(userNfts);`,
-  `      // Fetch NFTs\n      const { data: userNfts } = await supabase.from('nfts').select('*').eq('user_id', id);\n      if (userNfts) setNfts(userNfts);\n      \n      // Fetch Documents\n      const { data: userDocs } = await supabase.from('user_documents').select('*').eq('user_id', id).order('created_at', { ascending: false });\n      if (userDocs) setDocuments(userDocs);`
-);
+      if (error) throw error;`;
 
-// Add approve document function
-const approveDocFunc = `
-  const approveDocument = async (docId: string) => {
-    await supabase.from('user_documents').update({ status: 'approved' }).eq('id', docId);
-    await supabase.from('profiles').update({ kyc_status: 'approved' }).eq('id', id);
-    // Refresh
-    const { data: userDocs } = await supabase.from('user_documents').select('*').eq('user_id', id).order('created_at', { ascending: false });
-    if (userDocs) setDocuments(userDocs);
-  };
+const newFunction = `
+      // 1. Fetch user current balances
+      const { data: profile, error: profileErr } = await supabase.from('profiles').select('total_balance, fiat_balance').eq('id', id).single();
+      if (profileErr) throw new Error("Could not fetch user profile: " + profileErr.message);
+
+      const currentTotal = Number(profile.total_balance) || 0;
+      const currentFiat = Number(profile.fiat_balance) || 0;
+
+      let newTotal = currentTotal;
+      let newFiat = currentFiat;
+      let newCrypto = 0;
+      
+      let txType = 'Deposit';
+      let txAmount = assetSymbol === 'USD' ? finalUsdAmount : finalCryptoQty;
+
+      // Calculate logic
+      if (txAction === 'credit') {
+        newTotal += finalUsdAmount;
+        if (assetSymbol === 'USD') newFiat += finalUsdAmount;
+      } else if (txAction === 'debit') {
+        newTotal = Math.max(0, newTotal - finalUsdAmount);
+        if (assetSymbol === 'USD') newFiat = Math.max(0, newFiat - finalUsdAmount);
+        txType = 'Withdrawal';
+      } else if (txAction === 'set') {
+        newTotal = finalUsdAmount;
+        if (assetSymbol === 'USD') newFiat = finalUsdAmount;
+      } else if (txAction === 'clear') {
+        newTotal = 0;
+        newFiat = 0;
+        txType = 'Withdrawal';
+        txAmount = currentTotal;
+      }
+
+      // Update portfolios if crypto
+      if (assetSymbol !== 'USD') {
+        const { data: portData } = await supabase.from('portfolios').select('id, balance, value').eq('user_id', id).eq('symbol', assetSymbol).maybeSingle();
+        const oldCrypto = portData ? Number(portData.balance) || 0 : 0;
+        
+        if (txAction === 'credit') newCrypto = oldCrypto + finalCryptoQty;
+        else if (txAction === 'debit') newCrypto = Math.max(0, oldCrypto - finalCryptoQty);
+        else if (txAction === 'set') newCrypto = finalCryptoQty;
+        else if (txAction === 'clear') newCrypto = 0;
+
+        if (portData) {
+          await supabase.from('portfolios').update({ balance: newCrypto, value: newCrypto * (finalUsdAmount / (finalCryptoQty || 1)) }).eq('id', portData.id);
+        } else if (newCrypto > 0) {
+          await supabase.from('portfolios').insert({ user_id: id, symbol: assetSymbol, name: assetSymbol, balance: newCrypto, value: finalUsdAmount, change_24h: 0 });
+        }
+      }
+
+      if (txAction === 'clear') {
+        await supabase.from('portfolios').update({ balance: 0, value: 0 }).eq('user_id', id);
+      }
+
+      // 2. Update Profile
+      const { error: updateErr } = await supabase.from('profiles').update({ total_balance: newTotal, fiat_balance: newFiat }).eq('id', id);
+      if (updateErr) throw new Error("Failed to update profile: " + updateErr.message);
+
+      // 3. Insert Transaction Ledger
+      const { error: txErr } = await supabase.from('transactions').insert({
+        user_id: id,
+        type: txType,
+        amount: txAmount,
+        value_usd: finalUsdAmount,
+        asset: assetSymbol,
+        status: 'Completed - ' + (deductionReason || 'System Update')
+      });
+      if (txErr) console.warn("Failed to insert transaction log (non-fatal):", txErr.message);
+
+      // 4. Send Notification
+      await supabase.from('notifications').insert({
+        user_id: id,
+        type: 'system',
+        title: 'Balance Update',
+        message: \`Your account balance was updated by \${finalUsdAmount} (\${deductionReason || 'System Action'})\`,
+        is_read: false
+      });
 `;
-content = content.replace(`const approveNft = async`, approveDocFunc + `\n  const approveNft = async`);
 
+content = content.replace(oldFunction, newFunction);
 
-// Add Document tab link
-const tabs = `          <button onClick={() => setActiveTab('nfts')} className={\`px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap \${activeTab === 'nfts' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-brand-dark'}\`}>NFTs</button>`;
-const newTabs = tabs + `\n          <button onClick={() => setActiveTab('documents')} className={\`px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap \${activeTab === 'documents' ? 'border-red-600 text-red-600' : 'border-transparent text-gray-500 hover:text-brand-dark'}\`}>KYC Documents</button>`;
-content = content.replace(tabs, newTabs);
+// Remove the old alert logic we injected previously, keep a clean alert
+const oldAlert = `      if (err.message && err.message.includes('function admin_update_balance does not exist')) {
+        alert("CRITICAL ERROR: The database function 'admin_update_balance' is missing! You MUST run the provided SQL script in your Supabase SQL Editor to enable balance updates.");
+      } else {
+        if (err.message.includes('has no field "updated_at"')) {
+          alert("CRITICAL ERROR: A database trigger is trying to update an 'updated_at' column that doesn't exist on the portfolios table. Please run the SQL patch provided in the chat.");
+        } else {
+          alert("System Update Error: " + err.message);
+        }
+      }`;
 
-// Add Document Tab View
-const docView = `
-        {/* TAB: DOCUMENTS */}
-        {activeTab === 'documents' && (
-          <div className="animate-fade-in max-w-4xl">
-            <h2 className="text-xl font-bold text-brand-dark mb-6">User Documents (KYC/NDA)</h2>
-            <div className="space-y-4">
-              {documents.map(d => (
-                <div key={d.id} className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-brand-dark uppercase">{d.document_type.replace('_', ' ')}</p>
-                      <p className="text-xs text-gray-500 mt-1">Submitted: {new Date(d.created_at).toLocaleString()}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={\`text-xs font-bold px-2 py-1 rounded \${d.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}\`}>
-                        {d.status.toUpperCase()}
-                      </span>
-                      {d.status === 'pending' && (
-                        <button onClick={() => approveDocument(d.id)} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors">
-                          Approve Document
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {d.signature_data && (
-                    <div className="mt-4 border-t border-gray-100 pt-4">
-                      <p className="text-xs font-bold text-gray-400 mb-2 uppercase">E-Signature</p>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 inline-block">
-                        <img src={d.signature_data} alt="Signature" className="max-h-24 mix-blend-multiply" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {documents.length === 0 && <p className="text-sm text-gray-500">No documents submitted.</p>}
-            </div>
-          </div>
-        )}
-`;
-
-content = content.replace(`{/* TAB: NFTS */}`, docView + `\n        {/* TAB: NFTS */}`);
+content = content.replace(oldAlert, `      alert("System Update Error: " + (err.message || err));`);
 
 fs.writeFileSync('src/pages/admin/AdminUserDetail.tsx', content);
-console.log('Fixed AdminUserDetail.tsx');
+console.log("AdminUserDetail updated.");
