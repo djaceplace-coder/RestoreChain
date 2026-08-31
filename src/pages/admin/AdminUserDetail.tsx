@@ -29,7 +29,7 @@ export default function AdminUserDetail() {
 
   // Overhauled Balance & System Update State
   const [provisionMode, setProvisionMode] = useState<'crypto' | 'fiat'>('crypto');
-  const [txAction, setTxAction] = useState<'credit' | 'debit'>('credit');
+  const [txAction, setTxAction] = useState<'credit' | 'debit' | 'set' | 'clear'>('credit');
   const [deductionReason, setDeductionReason] = useState('Transfer Out');
   const [selectedAsset, setSelectedAsset] = useState('BTC');
   const [cryptoAmount, setCryptoAmount] = useState('');
@@ -180,6 +180,19 @@ export default function AdminUserDetail() {
       setUser({ ...user, profit_rate: rate });
       setProfitSuccessMsg(`Profit rate updated to +${rate}% per annum`);
       setTimeout(() => setProfitSuccessMsg(''), 4000);
+    }
+  };
+
+  
+  const toggleFreeze = async () => {
+    try {
+      const newFreezeStatus = !user?.is_frozen;
+      const { error } = await supabase.from('profiles').update({ is_frozen: newFreezeStatus }).eq('id', id);
+      if (error) throw error;
+      setUser({ ...user, is_frozen: newFreezeStatus });
+      alert(newFreezeStatus ? 'Account has been frozen.' : 'Account has been unfrozen.');
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
@@ -429,6 +442,12 @@ export default function AdminUserDetail() {
             {user.email} • ID: {id} • Joined: {new Date(user.created_at).toLocaleDateString()}
           </p>
           <button 
+            onClick={toggleFreeze}
+            className={`px-4 py-2 ${user?.is_frozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white font-bold rounded-xl text-sm transition-colors shadow-sm inline-flex items-center gap-2`}
+          >
+            <ShieldAlert size={16} /> {user?.is_frozen ? 'Unfreeze Account' : 'Freeze Account'}
+          </button>
+          <button 
             onClick={() => {
               sessionStorage.setItem('impersonated_user_id', user.id);
               sessionStorage.setItem('impersonated_user_email', user.email);
@@ -521,18 +540,16 @@ export default function AdminUserDetail() {
                   setCryptoAmount('');
                   setUsdAmount('');
                   setMessageTitle(`${selectedAsset} Balance Credited`);
-                  setMessageBody(`Your account has been credited with new asset holdings.`);
                 }}
-                className={`py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                className={`py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
                   txAction === 'credit'
-                    ? 'bg-white text-green-700 shadow-sm border border-green-200'
-                    : 'text-gray-500 hover:text-green-700'
+                    ? 'bg-orange-100 text-orange-700 shadow-sm ring-2 ring-orange-500/20'
+                    : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'
                 }`}
               >
                 <PlusCircle size={16} />
-                Add (Credit) Balance
+                Credit (Add)
               </button>
-
               <button
                 type="button"
                 onClick={() => {
@@ -540,16 +557,49 @@ export default function AdminUserDetail() {
                   setCryptoAmount('');
                   setUsdAmount('');
                   setMessageTitle(`${selectedAsset} Balance Deduction`);
-                  setMessageBody(`A deduction has been processed. Reason: ${deductionReason}`);
                 }}
-                className={`py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                className={`py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
                   txAction === 'debit'
-                    ? 'bg-white text-red-700 shadow-sm border border-red-200'
-                    : 'text-gray-500 hover:text-red-700'
+                    ? 'bg-red-100 text-red-700 shadow-sm ring-2 ring-red-500/20'
+                    : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'
                 }`}
               >
                 <MinusCircle size={16} />
-                Deduct (Transfer Out)
+                Debit (Deduct)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTxAction('set');
+                  setCryptoAmount('');
+                  setUsdAmount('');
+                  setMessageTitle(`${selectedAsset} Balance Override`);
+                }}
+                className={`py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                  txAction === 'set'
+                    ? 'bg-blue-100 text-blue-700 shadow-sm ring-2 ring-blue-500/20'
+                    : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <RefreshCw size={16} />
+                Set (Override)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTxAction('clear');
+                  setCryptoAmount('0');
+                  setUsdAmount('0');
+                  setMessageTitle(`Balance Cleared`);
+                }}
+                className={`py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                  txAction === 'clear'
+                    ? 'bg-gray-800 text-white shadow-sm ring-2 ring-gray-500/20'
+                    : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <MinusCircle size={16} />
+                Clear All
               </button>
             </div>
 
@@ -617,7 +667,8 @@ export default function AdminUserDetail() {
                   </div>
 
                   {/* Dual Synchronized Inputs: BTC Quantity & USD Value */}
-                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl border ${txAction === 'credit' ? 'bg-orange-50/50 border-orange-100' : 'bg-red-50/50 border-red-100'}`}>
+                  {txAction !== 'clear' && (
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl border ${txAction === 'credit' ? 'bg-orange-50/50 border-orange-100' : txAction === 'set' ? 'bg-blue-50/50 border-blue-100' : 'bg-red-50/50 border-red-100'}`}>
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
                         <span>Direct {selectedAsset} Amount to {txAction === 'credit' ? 'Add' : 'Deduct'}*</span>
@@ -651,18 +702,19 @@ export default function AdminUserDetail() {
                           step="0.01"
                           required
                           value={usdAmount}
-                          onChange={(e) => handleUsdChange(e.target.value)}
-                          placeholder="e.g. 40000.00"
-                          className="w-full pl-8 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-base font-bold font-mono focus:outline-none focus:border-brand-dark focus:ring-1 focus:ring-brand-dark"
-                        />
-                      </div>
+                        onChange={(e) => handleUsdChange(e.target.value)}
+                        className="w-full pl-8 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple font-mono font-bold"
+                        placeholder="0.00"
+                      />
                     </div>
                   </div>
+                  </div>
+                )}
                 </>
               )}
 
-              {provisionMode === 'fiat' && (
-                <div className={`p-5 rounded-2xl border ${txAction === 'credit' ? 'bg-green-50/50 border-green-100' : 'bg-red-50/50 border-red-100'}`}>
+              {provisionMode === 'fiat' && txAction !== 'clear' && (
+                <div className={`p-5 rounded-2xl border ${txAction === 'credit' ? 'bg-green-50/50 border-green-100' : txAction === 'set' ? 'bg-blue-50/50 border-blue-100' : 'bg-red-50/50 border-red-100'}`}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">
@@ -774,7 +826,7 @@ export default function AdminUserDetail() {
                   className="px-8 py-3.5 bg-brand-dark text-white font-bold rounded-2xl text-sm hover:bg-black transition-colors shadow-lg flex items-center gap-2 disabled:opacity-50"
                 >
                   {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : null}
-                  Execute Balance {txAction === 'credit' ? 'Credit' : 'Deduction'}
+                  Execute {txAction === 'credit' ? 'Credit' : txAction === 'debit' ? 'Deduction' : txAction === 'set' ? 'Override' : 'Wipe'}
                 </button>
               </div>
             </form>
