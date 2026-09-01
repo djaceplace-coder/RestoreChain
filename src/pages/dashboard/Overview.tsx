@@ -17,10 +17,16 @@ export default function Overview() {
       if (user) {
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
         let { data: userPortfolios, error: pErr } = await supabase.from('portfolios').select('*').eq('user_id', user.id);
-        if (pErr || !userPortfolios) {
-          const { data: fallbackAssets } = await supabase.from('assets').select('*').eq('user_id', user.id);
-          userPortfolios = fallbackAssets || [];
-        }
+if (pErr || !userPortfolios || userPortfolios.length === 0) {
+  const { data: fallbackAssets } = await supabase.from('assets').select('*').eq('user_id', user.id);
+  userPortfolios = fallbackAssets || [];
+  if (userPortfolios.length === 0) {
+    // If both are empty, check if admin provisioned via profiles total_balance
+    if (profile && profile.total_balance > 0) {
+      userPortfolios = [{ symbol: 'BTC', balance: profile.total_balance / (btcPrice || 77905), value: profile.total_balance, name: 'Bitcoin' }];
+    }
+  }
+}
         setPortfolio(userPortfolios);
         if (profile) {
           setUserProfile(profile);
