@@ -221,7 +221,7 @@ export default function Portfolio() {
       <h1 className="text-3xl font-display font-bold text-brand-dark mb-2">{displayGreeting}</h1>
 
             {/* Dual Balances Header */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="max-w-md">
         {/* Crypto Balance (BTC Equivalent) */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group">
           <div className="absolute -right-6 -top-6 w-24 h-24 bg-orange-100 rounded-full blur-2xl group-hover:bg-orange-200 transition-colors pointer-events-none"></div>

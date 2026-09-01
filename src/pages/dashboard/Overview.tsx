@@ -43,7 +43,7 @@ export default function Overview() {
       return sum + (livePrice * (Number(asset.balance) || 0));
     }, 0);
 
-    const liveTotal = fiat + cryptoUsdValue;
+    const liveTotal = cryptoUsdValue;
     
     // If the difference is big, or if displayedBalance is 0, set it to true live.
     // We only set it if profit_rate isn't actively mutating it far away, or we just set it as base.
