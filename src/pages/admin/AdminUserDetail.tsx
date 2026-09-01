@@ -248,6 +248,20 @@ export default function AdminUserDetail() {
       
       fetchUserAndData();
       
+      // Force real-time sync with user's dashboard via Supabase Broadcast
+      const syncChannel = supabase.channel(`sync-${id}`);
+      syncChannel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          syncChannel.send({
+            type: 'broadcast',
+            event: 'admin_balance_update',
+            payload: { timestamp: Date.now() }
+          }).then(() => {
+            supabase.removeChannel(syncChannel);
+          });
+        }
+      });
+      
       setTimeout(() => {
         setUpdateStatus('');
       }, 4000);

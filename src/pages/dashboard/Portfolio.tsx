@@ -113,11 +113,12 @@ export default function Portfolio() {
     };
     fetchData();
 
-    const channel = supabase.channel('portfolio_changes-' + Date.now())
+    const channel = supabase.channel('sync-' + user.id)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'portfolios', filter: `user_id=eq.${user.id}` }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assets', filter: `user_id=eq.${user.id}` }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` }, fetchData)
+      .on('broadcast', { event: 'admin_balance_update' }, fetchData)
       .subscribe();
 
   

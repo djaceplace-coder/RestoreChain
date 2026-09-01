@@ -33,9 +33,10 @@ export default function Overview() {
     let channel: any = null;
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        channel = supabase.channel('overview_changes-' + Date.now())
+        channel = supabase.channel('sync-' + user.id)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, fetchUser)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'portfolios', filter: `user_id=eq.${user.id}` }, fetchUser)
+          .on('broadcast', { event: 'admin_balance_update' }, fetchUser)
           .subscribe();
       }
     });
