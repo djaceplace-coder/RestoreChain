@@ -30,7 +30,7 @@ export default function Login() {
     }
     
     // Real Supabase Login Attempt (using password since we disabled email verification)
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (rememberMe) {
       localStorage.setItem("tracefield_remember_me", "true");
@@ -44,7 +44,12 @@ export default function Login() {
       setMessage(error.message);
     } else {
       setMessage('Login successful. Redirecting...');
-      setTimeout(() => navigate('/dashboard'), 1000);
+      const meta = data.user?.user_metadata || {};
+      if (meta.admin_created && !meta.onboarding_completed) {
+        setTimeout(() => navigate('/onboarding'), 1000);
+      } else {
+        setTimeout(() => navigate('/dashboard'), 1000);
+      }
     }
   };
   return (

@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertTriangle, Loader2, ArrowRight } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 export default function OnboardingReview() {
   const navigate = useNavigate();
   const [scanning, setScanning] = useState(true);
   const [progress, setProgress] = useState(0);
+
+  const handleFinish = async () => {
+    // Mark onboarding as completed for admin-created users (and any others)
+    await supabase.auth.updateUser({ data: { onboarding_completed: true } });
+    navigate('/dashboard/reconciliation');
+  };
 
   useEffect(() => {
     if (scanning) {
@@ -72,7 +79,7 @@ export default function OnboardingReview() {
       </div>
 
       <button 
-        onClick={() => navigate('/dashboard/reconciliation')}
+        onClick={handleFinish}
         className="flex items-center gap-2 px-10 py-4 bg-brand-dark text-white rounded-xl font-bold text-lg hover:bg-black transition-all shadow-lg transform hover:-translate-y-0.5"
       >
         Fix Issues in Dashboard <ArrowRight size={20} />

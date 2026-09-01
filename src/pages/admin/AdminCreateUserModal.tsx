@@ -39,6 +39,14 @@ export default function AdminCreateUserModal({ onClose, onUserCreated }: AdminCr
       const { data, error: signUpError } = await tempSupabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            admin_created: true,
+            onboarding_completed: false,
+            first_name: firstName,
+            last_name: lastName
+          }
+        }
       });
 
       if (signUpError) throw signUpError;

@@ -77,6 +77,12 @@ export default function DashboardLayout() {
   const checkUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
+      const meta = session.user.user_metadata || {};
+      if (meta.admin_created && !meta.onboarding_completed) {
+        navigate('/onboarding');
+        return;
+      }
+      
       setCurrentUser(session.user);
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
       if (profile) {
