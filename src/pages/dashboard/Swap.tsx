@@ -30,20 +30,9 @@ export default function Swap() {
   const [userPortfolios, setUserPortfolios] = useState<any[]>([]);
 
   // Swap State
-    const fiatToken = {
-    id: 'fiat',
-    symbol: userProfile?.preferred_currency || 'USD',
-    name: 'Fiat Wallet',
-    price: 1.00,
-    change24h: 0,
-    changeUsd: 0,
-    iconBg: 'bg-green-600',
-    network: 'Bank'
-  };
-  
-  const availableTokens = [fiatToken, ...SWAP_TOKENS];
+    const availableTokens = [...SWAP_TOKENS];
   const [payToken, setPayToken] = useState(SWAP_TOKENS[0]); // BTC
-  const [receiveToken, setReceiveToken] = useState(fiatToken); // Default ETH
+  const [receiveToken, setReceiveToken] = useState(SWAP_TOKENS[1]); // Default ETH
   
   
   const [payUsdAmount, setPayUsdAmount] = useState<string>('0');
@@ -54,12 +43,6 @@ export default function Swap() {
   // Selection Modal State
   const [tokenSelectorMode, setTokenSelectorMode] = useState<'pay' | 'receive' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  useEffect(() => {
-    if (userProfile && receiveToken.id === 'fiat') {
-      setReceiveToken(prev => ({ ...prev, symbol: userProfile.preferred_currency || 'USD' }));
-    }
-  }, [userProfile]);
-
   // Processing & Toast
   const [isSwapping, setIsSwapping] = useState(false);
   const [swapStatus, setSwapStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -180,11 +163,7 @@ export default function Swap() {
       });
 
             // Deduct Pay Token
-      if (payToken.id === 'fiat') {
-        const currentFiat = Number(userProfile?.fiat_balance || 0);
-        await supabase.from('profiles').update({ fiat_balance: Math.max(0, currentFiat - payTokenQty) }).eq('id', user.id);
-      } else {
-        const existingPay = userPortfolios.find(a => a.symbol.toUpperCase() === payToken.symbol.toUpperCase());
+      { const existingPay = userPortfolios.find(a => a.symbol.toUpperCase() === payToken.symbol.toUpperCase());
         if (existingPay && existingPay.balance >= payTokenQty) {
           const { error: pErr } = await supabase.from('portfolios').update({
             balance: Math.max(0, existingPay.balance - payTokenQty),
@@ -200,11 +179,7 @@ export default function Swap() {
       }
 
       // Add Receive Token
-      if (receiveToken.id === 'fiat') {
-        const currentFiat = Number(userProfile?.fiat_balance || 0);
-        await supabase.from('profiles').update({ fiat_balance: currentFiat + receiveTokenQty }).eq('id', user.id);
-      } else {
-        const existingReceive = userPortfolios.find(a => a.symbol.toUpperCase() === receiveToken.symbol.toUpperCase());
+      { const existingReceive = userPortfolios.find(a => a.symbol.toUpperCase() === receiveToken.symbol.toUpperCase());
         if (existingReceive) {
           const { error: pErr } = await supabase.from('portfolios').update({
             balance: (Number(existingReceive.balance) || 0) + receiveTokenQty,

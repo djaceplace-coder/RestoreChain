@@ -13,9 +13,7 @@ export default function AdminCreateUserModal({ onClose, onUserCreated }: AdminCr
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [initialBalance, setInitialBalance] = useState('');
-  const [preferredCurrency, setPreferredCurrency] = useState('USD');
-  const [tier, setTier] = useState('free');
+    const [tier, setTier] = useState('free');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -52,25 +50,10 @@ export default function AdminCreateUserModal({ onClose, onUserCreated }: AdminCr
       await supabase.from('profiles').update({
         first_name: firstName,
         last_name: lastName,
-        total_balance: Number(initialBalance) || 0,
-        fiat_balance: Number(initialBalance) || 0,
-        preferred_currency: preferredCurrency,
-        tier: tier
+                tier: tier
       }).eq('id', userId);
 
-      // Add a system transaction if balance provided
-      if (Number(initialBalance) > 0) {
-        await supabase.from('transactions').insert({
-          user_id: userId,
-          type: 'Deposit',
-          amount: Number(initialBalance),
-          value_usd: Number(initialBalance),
-          asset: 'USD',
-          status: 'Completed',
-        });
-      }
-
-      onUserCreated({ id: userId, email });
+            onUserCreated({ id: userId, email });
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to create user");
@@ -107,29 +90,14 @@ export default function AdminCreateUserModal({ onClose, onUserCreated }: AdminCr
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Password</label>
             <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500" placeholder="••••••••" />
           </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Initial Balance (USD)</label>
-            <input type="number" step="0.01" value={initialBalance} onChange={e => setInitialBalance(e.target.value)} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500" placeholder="0.00" />
-            <p className="text-[10px] text-gray-400 mt-1">This will create a 'System Update' transaction for the user.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Tier</label>
+                    <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Tier</label>
               <select value={tier} onChange={e => setTier(e.target.value)} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500">
                 <option value="free">Free</option>
                 <option value="premium">Premium</option>
                 <option value="vip">VIP</option>
-              </select>
+                </select>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Currency</label>
-              <select value={preferredCurrency} onChange={e => setPreferredCurrency(e.target.value)} className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-red-500">
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-              </select>
-            </div>
-          </div>
           <div className="pt-4 flex justify-end gap-3">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl">Cancel</button>
             {error && <p className="text-red-500 text-xs absolute left-6 bottom-8">{error}</p>}

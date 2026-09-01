@@ -28,7 +28,7 @@ export default function AdminUserDetail() {
   const [documents, setDocuments] = useState<any[]>([]);
 
   // Overhauled Balance & System Update State
-  const [provisionMode, setProvisionMode] = useState<'crypto' | 'fiat'>('crypto');
+  
   const [txAction, setTxAction] = useState<'credit' | 'debit' | 'set' | 'clear'>('credit');
   const [deductionReason, setDeductionReason] = useState('Account Adjustment');
   const [selectedAsset, setSelectedAsset] = useState('BTC');

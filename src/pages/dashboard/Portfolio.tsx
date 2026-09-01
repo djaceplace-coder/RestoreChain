@@ -130,8 +130,6 @@ export default function Portfolio() {
   
   useEffect(() => {
     if (!userProfile) return;
-    const fiat = Number(userProfile.fiat_balance || 0);
-    
     // Calculate live crypto value
     const cryptoUsdValue = assets.reduce((sum, asset) => {
       const liveRateData = liveRates.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
@@ -139,11 +137,11 @@ export default function Portfolio() {
       return sum + (livePrice * (Number(asset.balance) || 0));
     }, 0);
 
-    const liveTotal = fiat + cryptoUsdValue;
+    const liveTotal = cryptoUsdValue;
     setTotalValue(liveTotal);
     
     // Compute a purely structural base value to detect real admin/user deposits (ignoring price fluctuations)
-    const structuralBase = fiat + assets.reduce((sum, a) => sum + Number(a.balance || 0), 0);
+    const structuralBase = assets.reduce((sum, a) => sum + Number(a.balance || 0), 0);
     
     setDisplayedBalance(prev => {
       // If the structural base has changed (meaning real assets were added/removed), force update
@@ -242,8 +240,7 @@ export default function Portfolio() {
               const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (asset.value / (Number(asset.balance) || 0)) : 0);
               return sum + (livePrice * (Number(asset.balance) || 0));
             }, 0);
-            const fiat = Number(userProfile?.fiat_balance || 0);
-            const liveCryptoUsd = displayedBalance - fiat;
+            const liveCryptoUsd = displayedBalance;
             const liveBtcEquivalent = liveCryptoUsd > 0 ? liveCryptoUsd / btcPrice : 0;
             
             return (
@@ -259,27 +256,7 @@ export default function Portfolio() {
           })()}
         </div>
 
-        {/* Personal Balance */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden group">
-          <div className="absolute -right-6 -top-6 w-24 h-24 bg-green-100 rounded-full blur-2xl group-hover:bg-green-200 transition-colors pointer-events-none"></div>
-          <div className="flex items-center justify-between mb-4 relative z-10">
-            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Personal Balance</h2>
-            <Link to="/dashboard/swap" className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-purple text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-colors shadow-sm">
-              <Repeat size={14} /> Swap
-            </Link>
-          </div>
-          
-          <div className="relative z-10">
-            <div className="text-3xl md:text-4xl font-display font-bold text-brand-dark mb-1">
-              {showBalance ? `${getCurrencySymbol(userProfile?.preferred_currency)}${Number(userProfile?.fiat_balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `•••••••• ${userProfile?.preferred_currency || 'USD'}`}
-            </div>
-            <div className="text-sm font-bold text-gray-500 mb-4 uppercase">
-              {userProfile?.preferred_currency || 'USD'} Wallet
-            </div>
-          </div>
         </div>
-      </div>
-
       {/* Top Action Buttons: Add Funds & Withdraw */}
       <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
         <button onClick={() => handleActionWithKYC(() => setIsFundModalOpen(true))} className="p-4 bg-brand-purple text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-purple-700 transition-colors shadow-md group">

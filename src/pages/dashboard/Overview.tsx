@@ -34,9 +34,7 @@ export default function Overview() {
   // Recalculate base balance whenever coins or portfolio update
   useEffect(() => {
     if (!userProfile) return;
-    const fiat = Number(userProfile.fiat_balance || 0);
-    
-    // Calculate live crypto value
+        // Calculate live crypto value
     const cryptoUsdValue = portfolio.reduce((sum, asset) => {
       const liveRateData = coins.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
       const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (asset.value / (Number(asset.balance) || 0)) : 0);
