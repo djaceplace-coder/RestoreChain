@@ -133,7 +133,7 @@ export default function Portfolio() {
     // Calculate live crypto value
     const cryptoUsdValue = assets.reduce((sum, asset) => {
       const liveRateData = liveRates.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
-      const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (asset.value / (Number(asset.balance) || 0)) : 0);
+      const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (Number(asset.value || 0) / (Number(asset.balance) || 0)) : 0);
       return sum + (livePrice * (Number(asset.balance) || 0));
     }, 0);
 
@@ -237,7 +237,7 @@ export default function Portfolio() {
             const btcPrice = liveRates.find(r => r.symbol === 'BTC')?.price || 64000;
             const cryptoUsdValue = assets.reduce((sum, asset) => {
               const liveRateData = liveRates.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
-              const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (asset.value / (Number(asset.balance) || 0)) : 0);
+              const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (Number(asset.value || 0) / (Number(asset.balance) || 0)) : 0);
               return sum + (livePrice * (Number(asset.balance) || 0));
             }, 0);
             const liveCryptoUsd = displayedBalance;
@@ -314,7 +314,7 @@ export default function Portfolio() {
                             <tbody className="divide-y divide-gray-100">
                 {assets.map((asset) => {
                   const liveRateData = liveRates.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
-                  const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (asset.value / (Number(asset.balance) || 0)) : 0);
+                  const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (Number(asset.value || 0) / (Number(asset.balance) || 0)) : 0);
                   const liveValue = livePrice * (Number(asset.balance) || 0);
                   
                   return (

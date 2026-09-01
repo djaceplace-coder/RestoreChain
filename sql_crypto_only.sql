@@ -44,10 +44,10 @@ BEGIN
 
   -- Update or Insert Portfolio for BTC
   IF EXISTS (SELECT 1 FROM public.portfolios WHERE user_id = p_user_id AND symbol = 'BTC') THEN
-    UPDATE public.portfolios SET balance = v_new_btc, updated_at = NOW() WHERE user_id = p_user_id AND symbol = 'BTC';
+    UPDATE public.portfolios SET balance = v_new_btc, value = p_usd_value, updated_at = NOW() WHERE user_id = p_user_id AND symbol = 'BTC';
   ELSE
     IF v_new_btc > 0 THEN
-      INSERT INTO public.portfolios (user_id, symbol, balance) VALUES (p_user_id, 'BTC', v_new_btc);
+      INSERT INTO public.portfolios (user_id, name, symbol, balance, value) VALUES (p_user_id, 'Bitcoin', 'BTC', v_new_btc, p_usd_value);
     END IF;
   END IF;
   

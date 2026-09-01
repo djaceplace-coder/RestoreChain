@@ -29,6 +29,20 @@ export default function Overview() {
       setLoading(false);
     };
     fetchUser();
+
+    let channel: any = null;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        channel = supabase.channel('overview_changes-' + Date.now())
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, fetchUser)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'portfolios', filter: `user_id=eq.${user.id}` }, fetchUser)
+          .subscribe();
+      }
+    });
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   // Recalculate base balance whenever coins or portfolio update
@@ -37,7 +51,7 @@ export default function Overview() {
         // Calculate live crypto value
     const cryptoUsdValue = portfolio.reduce((sum, asset) => {
       const liveRateData = coins.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
-      const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (asset.value / (Number(asset.balance) || 0)) : 0);
+      const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (Number(asset.value || 0) / (Number(asset.balance) || 0)) : 0);
       return sum + (livePrice * (Number(asset.balance) || 0));
     }, 0);
 
