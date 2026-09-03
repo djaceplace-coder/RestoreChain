@@ -126,38 +126,25 @@ if (pErr || !userPortfolios || userPortfolios.length === 0) {
   }, [user]);
 
   // Recalculate base balance whenever coins or portfolio update
-  const prevBaseRef = React.useRef(0);
+  const dbBalanceRef = React.useRef(-1);
   
   useEffect(() => {
     if (!userProfile) return;
-    // Calculate live crypto value
-    const cryptoUsdValue = assets.reduce((sum, asset) => {
-      const liveRateData = liveRates.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
-      const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (Number(asset.value || 0) / (Number(asset.balance) || 0)) : 0);
-      return sum + (livePrice * (Number(asset.balance) || 0));
-    }, 0);
+    
+    const adminSetBalance = Number(userProfile.total_balance) || 0;
+    let baseTotal = adminSetBalance;
+    
+    if (adminSetBalance === 0 && assets.length > 0) {
+      baseTotal = assets.reduce((sum, asset) => sum + (Number(asset.value) || 0), 0);
+    }
+    
+    setTotalValue(baseTotal);
 
-    const liveTotal = cryptoUsdValue;
-    setTotalValue(liveTotal);
-    
-    // Compute a purely structural base value to detect real admin/user deposits (ignoring price fluctuations)
-    const structuralBase = assets.reduce((sum, a) => sum + Number(a.balance || 0), 0);
-    
-    setDisplayedBalance(prev => {
-      // If the structural base has changed (meaning real assets were added/removed), force update
-      if (prevBaseRef.current !== structuralBase) {
-        prevBaseRef.current = structuralBase;
-        return liveTotal;
-      }
-      
-      // Otherwise, only update if the liveTotal deviates by more than 5% (to preserve fake growth ticks)
-      if (prev === 0 || Math.abs(prev - liveTotal) > (liveTotal * 0.05)) {
-        return liveTotal;
-      }
-      
-      return prev;
-    });
-  }, [userProfile, assets, liveRates]);
+    if (dbBalanceRef.current !== adminSetBalance) {
+      dbBalanceRef.current = adminSetBalance;
+      setDisplayedBalance(baseTotal);
+    }
+  }, [userProfile, assets]);
 
   
   useEffect(() => {
@@ -315,7 +302,7 @@ if (pErr || !userPortfolios || userPortfolios.length === 0) {
                 {assets.map((asset) => {
                   const liveRateData = liveRates.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
                   const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (Number(asset.value || 0) / (Number(asset.balance) || 0)) : 0);
-                  const liveValue = livePrice * (Number(asset.balance) || 0);
+                  const liveValue = Number(asset.value) || (livePrice * (Number(asset.balance) || 0));
                   
                   return (
                   <tr key={asset.id} className="hover:bg-gray-50/50 transition-colors">

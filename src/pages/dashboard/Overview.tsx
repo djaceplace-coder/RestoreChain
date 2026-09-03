@@ -52,29 +52,27 @@ if (pErr || !userPortfolios || userPortfolios.length === 0) {
     };
   }, []);
 
-  // Recalculate base balance whenever coins or portfolio update
+    // Stable base balance anchoring to admin's explicit total_balance
+  const dbBalanceRef = React.useRef(-1);
+  
   useEffect(() => {
     if (!userProfile) return;
-        // Calculate live crypto value
-    const cryptoUsdValue = portfolio.reduce((sum, asset) => {
-      const liveRateData = coins.find((r: any) => r.symbol?.toUpperCase() === (asset.symbol?.toUpperCase() || ""));
-      const livePrice = liveRateData ? liveRateData.price : ((Number(asset.balance) || 0) > 0 ? (Number(asset.value || 0) / (Number(asset.balance) || 0)) : 0);
-      return sum + (livePrice * (Number(asset.balance) || 0));
-    }, 0);
-
-    const liveTotal = cryptoUsdValue;
     
-    // If the difference is big, or if displayedBalance is 0, set it to true live.
-    // We only set it if profit_rate isn't actively mutating it far away, or we just set it as base.
-    // Since we have a real-time growth effect below, we only want to update the base if it changes significantly 
-    // from the live rate, or if it's the first load.
-    setDisplayedBalance(prev => {
-      if (prev === 0 || Math.abs(prev - liveTotal) > (liveTotal * 0.05)) {
-        return liveTotal;
-      }
-      return prev;
-    });
-  }, [userProfile, portfolio, coins]);
+    const adminSetBalance = Number(userProfile.total_balance) || 0;
+    
+    // Fallback if admin has not explicitly set a balance but user has legacy assets
+    let baseTotal = adminSetBalance;
+    if (adminSetBalance === 0 && portfolio.length > 0) {
+      baseTotal = portfolio.reduce((sum, asset) => sum + (Number(asset.value) || 0), 0);
+    }
+
+    // Only update displayed balance if the DB value actually changed (meaning admin explicitly updated it)
+    // This prevents live price fluctuations or profit tick increments from snapping the balance back
+    if (dbBalanceRef.current !== adminSetBalance) {
+      dbBalanceRef.current = adminSetBalance;
+      setDisplayedBalance(baseTotal);
+    }
+  }, [userProfile, portfolio]);
 
   // Real-time balance growth effect
   useEffect(() => {

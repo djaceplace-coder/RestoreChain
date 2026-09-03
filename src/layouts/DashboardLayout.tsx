@@ -161,11 +161,9 @@ export default function DashboardLayout() {
         </div>
 
         <nav className="flex-1 px-3 overflow-y-auto pb-6 space-y-1 custom-scrollbar">
-          {kycStatus !== 'approved' && (
           <Link to="/dashboard/agreement" onClick={closeMobileMenu} className={navLinkClass('/dashboard/agreement')}>
-            <FileText size={18} className="text-orange-500" /> Action Required: NDA
+            <FileText size={18} className="text-orange-500" /> Agreement (NDA)
           </Link>
-          )}
           <Link to="/dashboard" onClick={closeMobileMenu} className={navLinkClass('/dashboard', true)}>
             <LayoutDashboard size={18} /> Portfolio
           </Link>
