@@ -9,6 +9,12 @@ export default function Settings() {
   const [profile, setProfile] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isKYCModalOpen, setIsKYCModalOpen] = useState(false);
+  
+  // Password change state
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -21,6 +27,32 @@ export default function Settings() {
     };
     fetchUser();
   }, []);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'Passwords do not match.' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordMessage({ type: 'error', text: 'Password must be at least 6 characters.' });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    setPasswordMessage(null);
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      setPasswordMessage({ type: 'error', text: error.message });
+    } else {
+      setPasswordMessage({ type: 'success', text: 'Password updated successfully.' });
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+    setIsChangingPassword(false);
+  };
 
 
   return (
@@ -70,12 +102,50 @@ export default function Settings() {
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">Email Address</label>
-              <input type="email" defaultValue="jane@example.com" disabled className="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed" />
+              <input type="email" defaultValue={currentUser?.email || ''} disabled className="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed" />
               <p className="text-xs text-gray-500 mt-1">Contact support to change your email address.</p>
             </div>
             <button className="px-6 py-3 bg-brand-dark text-white font-bold rounded-xl hover:bg-black transition-colors">
               Save Changes
             </button>
+
+            <div className="pt-8 border-t border-gray-100">
+              <h2 className="text-xl font-bold text-brand-dark mb-4">Change Password</h2>
+              <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">New Password</label>
+                  <input 
+                    type="password" 
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-purple" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Confirm New Password</label>
+                  <input 
+                    type="password" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-purple" 
+                  />
+                </div>
+                {passwordMessage && (
+                  <div className={`p-3 text-sm rounded-lg font-medium ${passwordMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {passwordMessage.text}
+                  </div>
+                )}
+                <button 
+                  type="submit" 
+                  disabled={isChangingPassword}
+                  className="px-6 py-3 bg-brand-dark text-white font-bold rounded-xl hover:bg-black transition-colors disabled:opacity-50"
+                >
+                  {isChangingPassword ? 'Updating...' : 'Update Password'}
+                </button>
+              </form>
+            </div>
 
             <div className="pt-8 border-t border-gray-100">
               <h2 className="text-xl font-bold text-brand-dark mb-4">Identity Verification (KYC)</h2>

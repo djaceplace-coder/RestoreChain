@@ -52,6 +52,11 @@ export default function AdminUserDetail() {
   const [reconDesc, setReconDesc] = useState('Unconfirmed UTXO transfer detected on cold storage network.');
   const [reconStatus, setReconStatus] = useState('');
 
+  // Admin Password Change State
+  const [adminNewPassword, setAdminNewPassword] = useState('');
+  const [adminIsChangingPassword, setAdminIsChangingPassword] = useState(false);
+  const [adminPasswordMessage, setAdminPasswordMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+
   // Wallet Form State
   const [walletAddress, setWalletAddress] = useState('');
   const [walletNetwork, setWalletNetwork] = useState('Bitcoin');
@@ -183,6 +188,27 @@ export default function AdminUserDetail() {
     }
   };
 
+  const handleAdminPasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminNewPassword) return;
+    
+    setAdminIsChangingPassword(true);
+    setAdminPasswordMessage(null);
+    
+    const { error } = await supabase.rpc('admin_update_user_password', { 
+      target_user_id: id, 
+      new_password: adminNewPassword 
+    });
+    
+    if (error) {
+      setAdminPasswordMessage({ type: 'error', text: error.message });
+    } else {
+      setAdminPasswordMessage({ type: 'success', text: 'Password successfully updated.' });
+      setAdminNewPassword('');
+    }
+    
+    setAdminIsChangingPassword(false);
+  };
   
   const toggleFreeze = async () => {
     try {
@@ -637,6 +663,42 @@ const resolveReconIssue = async (issueId: string) => {
                 </button>
               </form>
               {profitSuccessMsg && <p className="text-green-600 text-sm font-bold mt-3 flex items-center gap-1.5"><CheckCircle size={14}/> {profitSuccessMsg}</p>}
+            </div>
+
+            {/* Admin Password Change Configuration */}
+            <div className="mt-10 border-t border-gray-200 pt-8">
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldAlert size={20} className="text-brand-purple" />
+                <h3 className="text-lg font-bold text-brand-dark">Override User Password</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">Directly update this user's password. Requires admin privileges.</p>
+
+              <form onSubmit={handleAdminPasswordChange} className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 max-w-xl">
+                <div className="flex-1">
+                  <label className="block text-[11px] uppercase tracking-wider font-bold text-gray-500 mb-1">New Password</label>
+                  <input
+                    type="password"
+                    value={adminNewPassword}
+                    onChange={(e) => setAdminNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    minLength={6}
+                    required
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-brand-dark"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={adminIsChangingPassword}
+                  className="px-6 py-3 bg-brand-dark text-white font-bold rounded-xl hover:bg-black transition-colors flex items-center justify-center min-w-[120px]"
+                >
+                  {adminIsChangingPassword ? <Loader2 size={16} className="animate-spin" /> : 'Set Password'}
+                </button>
+              </form>
+              {adminPasswordMessage && (
+                <div className={`mt-3 p-3 text-sm rounded-lg font-medium max-w-xl ${adminPasswordMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                  {adminPasswordMessage.text}
+                </div>
+              )}
             </div>
 
           </div>
