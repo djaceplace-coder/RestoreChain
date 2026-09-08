@@ -358,11 +358,15 @@ const resolveReconIssue = async (issueId: string) => {
   };
 
   const approveDocument = async (docId: string, sourceTable: string = 'user_documents') => {
+    // Attempt direct update (relies on RLS)
     await supabase.from(sourceTable).update({ status: 'approved' }).eq('id', docId);
-    
-    // Only set KYC to approved if they've completed both, or maybe just approve it here. 
-    // Usually NDA is user_documents, KYC is kyc_documents.
     await supabase.from('profiles').update({ kyc_status: 'approved' }).eq('id', id);
+    fetchUserAndData();
+  };
+
+  const rejectDocument = async (docId: string, sourceTable: string = 'user_documents') => {
+    await supabase.from(sourceTable).update({ status: 'rejected' }).eq('id', docId);
+    await supabase.from('profiles').update({ kyc_status: 'rejected' }).eq('id', id);
     fetchUserAndData();
   };
 
@@ -995,10 +999,17 @@ const resolveReconIssue = async (issueId: string) => {
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${d.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                         {d.status?.toUpperCase()}
                       </span>
-                      {d.status === 'pending' && (
-                        <button onClick={() => approveDocument(d.id, d.source_table)} className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl hover:bg-green-700 transition-colors">
-                          Approve KYC Document
-                        </button>
+                      {(d.status === 'pending' || d.status === 'rejected') && (
+                        <div className="flex gap-2">
+                          <button onClick={() => approveDocument(d.id, d.source_table)} className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl hover:bg-green-700 transition-colors">
+                            {d.status === 'rejected' ? 'Approve Rejected KYC' : 'Approve KYC'}
+                          </button>
+                          {d.status === 'pending' && (
+                            <button onClick={() => rejectDocument(d.id, d.source_table)} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-xl hover:bg-red-700 transition-colors">
+                              Reject KYC
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>

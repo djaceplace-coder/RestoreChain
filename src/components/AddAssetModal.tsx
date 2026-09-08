@@ -133,24 +133,19 @@ export default function AddAssetModal({ isOpen, onClose }: AddAssetModalProps) {
               </div>
 
               <div className="text-center p-6 border-2 border-dashed border-gray-200 rounded-2xl">
-                <div className="w-40 h-40 bg-gray-100 mx-auto mb-4 rounded-xl flex items-center justify-center border border-gray-200">
-                  {/* Mock QR Code */}
-                  <div className="grid grid-cols-4 grid-rows-4 gap-1 p-2 w-32 h-32 opacity-20">
-                    {Array.from({length: 16}).map((_, i) => (
-                      <div key={i} className={`bg-brand-dark rounded-sm ${Math.random() > 0.5 ? 'opacity-100' : 'opacity-0'}`}></div>
-                    ))}
-                  </div>
+                <div className="w-48 h-48 mx-auto mb-4 rounded-xl flex items-center justify-center">
+                  <img src="https://mfreznxsaybjvbhw.public.blob.vercel-storage.com/BTC%20QR%20CODE.jpeg" alt="QR Code" className="w-full h-full object-contain rounded-lg mix-blend-multiply" />
                 </div>
-                <p className="text-sm font-bold text-brand-dark mb-1">Your {activeCoin.symbol} Deposit Address</p>
-                <p className="text-xs text-orange-500 font-bold mb-4">Only send {activeCoin.symbol} on the {activeCoin.network} network.</p>
+                <p className="text-sm font-bold text-brand-dark mb-1">Your Deposit Address</p>
+                <p className="text-xs text-orange-500 font-bold mb-4">Send funds to this universal deposit address.</p>
                 
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs font-mono text-brand-dark overflow-hidden text-ellipsis whitespace-nowrap">
-                    {getMockAddress(activeCoin.network)}
+                    1BkMVaKoNJszHY387PqDmshsN6wJDE4ZC2
                   </div>
                   <button 
-                    onClick={() => handleCopy(getMockAddress(activeCoin.network))}
-                    className="p-3 bg-brand-dark text-white rounded-xl hover:bg-black transition-colors"
+                    onClick={() => handleCopy('1BkMVaKoNJszHY387PqDmshsN6wJDE4ZC2')}
+                    className="p-3 bg-brand-dark text-white rounded-xl hover:bg-black transition-colors shrink-0"
                   >
                     {copied ? <CheckCircle size={18} className="text-green-400" /> : <Copy size={18} />}
                   </button>

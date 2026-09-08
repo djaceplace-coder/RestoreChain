@@ -532,11 +532,11 @@ function FundModal({ onClose, user }: { onClose: () => void, user: any }) {
                   </select>
                 </div>
                 <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl text-center">
-                   <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=0x1234567890abcdef1234567890abcdef12345678" alt="QR" className="mx-auto mb-4 rounded-lg mix-blend-multiply" />
+                   <img src="https://mfreznxsaybjvbhw.public.blob.vercel-storage.com/BTC%20QR%20CODE.jpeg" alt="QR Code" className="mx-auto mb-4 rounded-lg w-48 h-48 object-contain mix-blend-multiply" />
                    <p className="text-xs font-bold text-gray-500 uppercase mb-1">Deposit Address</p>
                    <div className="flex items-center justify-center gap-2">
-                     <code className="text-sm bg-white border border-gray-200 px-3 py-1.5 rounded">0x123...5678</code>
-                     <button className="p-1.5 text-gray-400 hover:text-brand-purple bg-white border border-gray-200 rounded"><Copy size={16}/></button>
+                     <code className="text-xs break-all bg-white border border-gray-200 px-3 py-1.5 rounded text-gray-800">1BkMVaKoNJszHY387PqDmshsN6wJDE4ZC2</code>
+                     <button onClick={() => navigator.clipboard.writeText('1BkMVaKoNJszHY387PqDmshsN6wJDE4ZC2')} className="p-1.5 text-gray-400 hover:text-brand-purple bg-white border border-gray-200 rounded shrink-0"><Copy size={16}/></button>
                    </div>
                 </div>
                 <button onClick={submitFundRequest} className="w-full py-3 bg-brand-purple text-white font-bold rounded-xl hover:bg-purple-700 transition-colors mt-2">I have sent the crypto</button>
