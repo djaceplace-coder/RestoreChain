@@ -1,6 +1,6 @@
 {
   "name": "Tracefield",
-  "description": "Tracefield provides comprehensive blockchain forensics and digital asset recovery services.",
+  "description": "Provider of institutional digital asset tracing, on-chain forensic documentation, and smart contract vulnerability analysis operating under UK AML/KYC standards.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

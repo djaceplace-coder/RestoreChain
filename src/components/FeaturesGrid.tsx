@@ -3,14 +3,14 @@ import { Calculator, Zap, FileText, Clock } from 'lucide-react';
 export default function FeaturesGrid() {
   const features = [
     {
-      title: 'Trace stolen assets',
-      description: 'We track your portfolio across all wallets, mixers, and bridges to calculate the exact path of your funds.',
+      title: 'Court-admissible tracing',
+      description: 'We provide forensic blockchain tracking and court-admissible asset tracing across all ledgers, mixers, and bridges.',
       icon: <Calculator size={24} className="text-brand-purple" />,
       color: 'bg-purple-100'
     },
     {
-      title: 'Recover wallet access',
-      description: 'Our cryptographic brute-force tools automatically find opportunities to unlock hardware wallets and corrupted seed phrases.',
+      title: 'Cryptographic integrity',
+      description: 'Hardware diagnostic analysis and cryptographic integrity checks to assess isolated devices and private keys.',
       icon: <Zap size={24} className="text-brand-green" />,
       color: 'bg-[#D9F950]/30'
     },
@@ -21,8 +21,8 @@ export default function FeaturesGrid() {
       color: 'bg-blue-100'
     },
     {
-      title: 'Freeze accounts in minutes',
-      description: 'Generate comprehensive forensic reports that you can hand to law enforcement or exchanges to freeze funds instantly.',
+      title: 'Evidentiary chain-of-custody',
+      description: 'Generate comprehensive chain-of-custody evidentiary reporting for institutional law enforcement submission.',
       icon: <Clock size={24} className="text-orange-500" />,
       color: 'bg-orange-100'
     }
@@ -33,10 +33,10 @@ export default function FeaturesGrid() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 max-w-3xl mx-auto">
           <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">
-            We do the tracing,<br/>you regain control.
+            We handle the forensics,<br/>you regain control.
           </h2>
           <p className="text-lg text-gray-300">
-            Navigating a cyber incident is complicated. Our automated forensic engine handles the complexity so you can focus on recovery.
+            Navigating a cyber incident is complicated. Our automated evidentiary engine handles the complexity so you can focus on resolution.
           </p>
         </div>
 

@@ -25,16 +25,16 @@ export default function Hero() {
 
           {/* Main Headline */}
           <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tight text-white mb-6 leading-[1.1]">
-            Digital asset recovery <span className="text-brand-purple">made possible</span>.
+            Forensic blockchain tracking <span className="text-brand-purple">made possible</span>.
           </h1>
           
           <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Recover lost assets, trace stolen funds, and secure your blockchain identity with the #1 digital recovery platform. We combine on-chain analytics with legal expertise.
+            Provide evidentiary chain-of-custody reporting and secure your blockchain identity with the #1 digital forensics platform. We combine on-chain analytics with legal expertise.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/signup" className="w-full sm:w-auto bg-brand-purple text-white px-8 py-4 rounded-full text-lg font-medium hover:bg-brand-purple/90 transition-all transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg shadow-brand-purple/25">
-              Start a Case Review <ArrowRight size={20} />
+              Submit for preliminary compliance review & mutual NDA execution <ArrowRight size={20} />
             </Link>
             <span className="text-sm text-gray-300 mt-2 sm:mt-0">Free initial consultation</span>
           </div>

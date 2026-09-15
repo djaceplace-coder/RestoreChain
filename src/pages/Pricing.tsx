@@ -59,7 +59,7 @@ export default function Pricing() {
                 <li className="flex items-start gap-3"><Check className="text-brand-green mt-1 shrink-0" size={18} /> <span className="text-sm">Secure asset escrow return</span></li>
               </ul>
               <Link to="/signup" className="block w-full py-3 px-4 bg-white text-brand-purple text-center font-bold rounded-xl hover:bg-gray-50 transition-colors">
-                Start a Case
+                Submit for preliminary compliance review & mutual NDA execution
               </Link>
             </div>
 

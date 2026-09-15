@@ -8,8 +8,8 @@ export default function Services() {
       icon: Search,
     },
     {
-      title: 'Wallet Recovery',
-      description: 'Brute-force and cryptographic recovery of lost passwords, corrupted seed phrases, and inaccessible hardware wallets.',
+      title: 'Hardware Diagnostic Analysis',
+      description: 'Cryptographic integrity audits and hardware diagnostic analysis for isolated keys and compromised devices.',
       icon: RefreshCcw,
     },
     {
