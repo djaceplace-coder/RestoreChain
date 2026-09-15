@@ -222,6 +222,25 @@ export default function AdminUserDetail() {
     }
   };
 
+  const toggleSuspend = async () => {
+    try {
+      const isCurrentlySuspended = user?.account_status === 'suspended';
+      const newStatus = isCurrentlySuspended ? 'active' : 'suspended';
+      
+      // Try direct update first, fallback to RPC if RLS blocks it
+      let { error } = await supabase.from('profiles').update({ account_status: newStatus }).eq('id', id);
+      if (error) {
+        const { error: rpcError } = await supabase.rpc('admin_update_account_status', { target_user_id: id, new_status: newStatus });
+        if (rpcError) throw rpcError;
+      }
+      
+      setUser({ ...user, account_status: newStatus });
+      alert(isCurrentlySuspended ? 'Account has been activated.' : 'Account has been suspended.');
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   
   const handleDeleteUser = async () => {
     if (!window.confirm("Are you SURE you want to completely delete this user and all associated data? This cannot be undone.")) return;
@@ -448,23 +467,36 @@ const resolveReconIssue = async (issueId: string) => {
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase bg-gray-100 text-gray-700">
               {user.role}
             </span>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase ${
+              user.account_status === 'suspended' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+            }`}>
+              {user.account_status === 'suspended' ? 'Suspended' : 'Active'}
+            </span>
           </div>
 
           <p className="text-gray-500 text-sm font-mono mb-3">
             {user.email} • ID: {id} • Joined: {new Date(user.created_at).toLocaleDateString()}
           </p>
-          <button 
-            onClick={toggleFreeze}
-            className={`px-4 py-2 ${user?.is_frozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white font-bold rounded-xl text-sm transition-colors shadow-sm inline-flex items-center gap-2`}
-          >
-            <ShieldAlert size={16} /> {user?.is_frozen ? 'Unfreeze Account' : 'Freeze Account'}
-          </button>
-          <button 
-            onClick={handleDeleteUser}
-            className="px-4 py-2 bg-red-100 text-red-600 font-bold rounded-xl text-sm hover:bg-red-600 hover:text-white transition-colors shadow-sm inline-flex items-center gap-2"
-          >
-            <Trash2 size={16} /> Delete Account
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button 
+              onClick={toggleFreeze}
+              className={`px-4 py-2 ${user?.is_frozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white font-bold rounded-xl text-sm transition-colors shadow-sm inline-flex items-center gap-2`}
+            >
+              <ShieldAlert size={16} /> {user?.is_frozen ? 'Unfreeze Account' : 'Freeze Account'}
+            </button>
+            <button 
+              onClick={toggleSuspend}
+              className={`px-4 py-2 ${user?.account_status === 'suspended' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'} text-white font-bold rounded-xl text-sm transition-colors shadow-sm inline-flex items-center gap-2`}
+            >
+              <ShieldAlert size={16} /> {user?.account_status === 'suspended' ? 'Activate Account' : 'Suspend Account'}
+            </button>
+            <button 
+              onClick={handleDeleteUser}
+              className="px-4 py-2 bg-red-100 text-red-600 font-bold rounded-xl text-sm hover:bg-red-600 hover:text-white transition-colors shadow-sm inline-flex items-center gap-2"
+            >
+              <Trash2 size={16} /> Delete Account
+            </button>
+          </div>
         </div>
 
         {/* Live Total & BTC Equivalent Card */}

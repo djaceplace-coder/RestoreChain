@@ -232,12 +232,17 @@ if (pErr || !userPortfolios || userPortfolios.length === 0) {
             
             return (
               <div className="relative z-10">
-                <div className="text-3xl md:text-4xl font-display font-bold text-brand-dark mb-1">
+                <div className={`text-3xl md:text-4xl font-display font-bold mb-1 ${userProfile?.account_status === 'suspended' ? 'text-gray-400' : 'text-brand-dark'}`}>
                   {showBalance ? `${liveBtcEquivalent.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 })} BTC` : '•••••••• BTC'}
                 </div>
-                <div className="text-sm font-bold text-gray-500 mb-3">
+                <div className={`text-sm font-bold mb-3 ${userProfile?.account_status === 'suspended' ? 'text-gray-400' : 'text-gray-500'}`}>
                   {showBalance ? `≈ ${getCurrencySymbol(userProfile?.preferred_currency)}${liveCryptoUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `≈ ${getCurrencySymbol(userProfile?.preferred_currency)}••••••••`}
                 </div>
+                {userProfile?.account_status === 'suspended' && (
+                  <p className="text-xs text-red-500 font-bold">
+                    Account Suspended. Funds inaccessible.
+                  </p>
+                )}
               </div>
             );
           })()}

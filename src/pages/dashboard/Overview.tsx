@@ -114,13 +114,18 @@ if (pErr || !userPortfolios || userPortfolios.length === 0) {
             <h3 className="text-brand-text-gray font-medium text-sm">Total Balance (USD)</h3>
             <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><Activity size={20} /></div>
           </div>
-          <p className="text-3xl sm:text-4xl font-display font-bold text-brand-dark mb-1">
+          <p className={`text-3xl sm:text-4xl font-display font-bold mb-1 ${userProfile?.account_status === 'suspended' ? 'text-gray-400' : 'text-brand-dark'}`}>
             ${displayedBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="text-xs text-gray-500 font-mono">
+          <p className={`text-xs font-mono ${userProfile?.account_status === 'suspended' ? 'text-gray-400' : 'text-gray-500'}`}>
             ≈ {btcEquivalent.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 })} BTC
           </p>
-          {Number(userProfile?.profit_rate) > 0 && (
+          {userProfile?.account_status === 'suspended' && (
+            <p className="text-xs text-red-500 font-bold mt-2">
+              Account Suspended. Funds inaccessible.
+            </p>
+          )}
+          {Number(userProfile?.profit_rate) > 0 && userProfile?.account_status !== 'suspended' && (
             <p className="text-xs text-green-600 mt-2 font-medium flex items-center gap-1">
               <TrendingUp size={14} /> +{userProfile?.profit_rate}% Active Growth
             </p>

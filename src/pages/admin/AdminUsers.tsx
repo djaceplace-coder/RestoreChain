@@ -76,6 +76,7 @@ export default function AdminUsers() {
               <tr className="bg-gray-50/50 text-xs text-gray-500 uppercase tracking-wider">
                 <th className="px-6 py-4 font-medium">User</th>
                 <th className="px-6 py-4 font-medium">Plan</th>
+                <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium">Balance</th>
                 <th className="px-6 py-4 font-medium">Role</th>
                 <th className="px-6 py-4 font-medium">Joined</th>
@@ -93,6 +94,11 @@ export default function AdminUsers() {
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${user.plan === 'Free' ? 'bg-gray-100 text-gray-600' : 'bg-brand-purple/10 text-brand-purple'}`}>
                       {user.plan || 'Free'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${user.account_status === 'suspended' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {user.account_status === 'suspended' ? 'Suspended' : 'Active'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
