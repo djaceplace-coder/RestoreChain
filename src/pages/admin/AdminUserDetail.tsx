@@ -75,6 +75,7 @@ export default function AdminUserDetail() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${id}` }, fetchUserAndData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tax_reports', filter: `user_id=eq.${id}` }, fetchUserAndData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'user_documents', filter: `user_id=eq.${id}` }, fetchUserAndData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kyc_documents', filter: `user_id=eq.${id}` }, fetchUserAndData)
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -105,7 +106,7 @@ export default function AdminUserDetail() {
     if (taxData) setTaxReports(taxData);
 
     const { data: userDocs } = await supabase.from('user_documents').select('*').eq('user_id', id).order('created_at', { ascending: false });
-    const { data: kycDocs } = await supabase.from('user_documents').select('*').eq('user_id', id).order('created_at', { ascending: false });
+    const { data: kycDocs } = await supabase.from('kyc_documents').select('*').eq('user_id', id).order('created_at', { ascending: false });
     
     let combinedDocs: any[] = [];
     if (userDocs) {
@@ -377,16 +378,27 @@ const resolveReconIssue = async (issueId: string) => {
   };
 
   const approveDocument = async (docId: string, sourceTable: string = 'user_documents') => {
-    // Attempt direct update (relies on RLS)
-    await supabase.from(sourceTable).update({ status: 'approved' }).eq('id', docId);
-    await supabase.from('profiles').update({ kyc_status: 'approved' }).eq('id', id);
-    fetchUserAndData();
+    try {
+      await supabase.from(sourceTable).update({ status: 'approved' }).eq('id', docId);
+      if (sourceTable === 'kyc_documents') {
+        await supabase.from('profiles').update({ kyc_status: 'approved' }).eq('id', id);
+      }
+      fetchUserAndData();
+    } catch (err) {
+      console.error('Error approving document:', err);
+    }
   };
 
   const rejectDocument = async (docId: string, sourceTable: string = 'user_documents') => {
-    await supabase.from(sourceTable).update({ status: 'rejected' }).eq('id', docId);
-    await supabase.from('profiles').update({ kyc_status: 'rejected' }).eq('id', id);
-    fetchUserAndData();
+    try {
+      await supabase.from(sourceTable).update({ status: 'rejected' }).eq('id', docId);
+      if (sourceTable === 'kyc_documents') {
+        await supabase.from('profiles').update({ kyc_status: 'rejected' }).eq('id', id);
+      }
+      fetchUserAndData();
+    } catch (err) {
+      console.error('Error rejecting document:', err);
+    }
   };
 
   const pushNotification = async (e: React.FormEvent) => {
@@ -1024,21 +1036,27 @@ const resolveReconIssue = async (issueId: string) => {
                 <div key={d.id} className="p-6 border border-gray-200 rounded-2xl bg-white shadow-sm flex flex-col gap-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-bold text-brand-dark uppercase">{d.document_type?.replace('_', ' ')}</p>
-                      <p className="text-xs text-gray-500 mt-1 font-mono">Submitted: {new Date(d.created_at).toLocaleString()}</p>
+                      <p className="font-bold text-brand-dark uppercase">
+                        {d.source_table === 'user_documents' || d.document_type === 'terms_agreement'
+                          ? 'Master Services Agreement & NDA'
+                          : (d.document_type?.replace('_', ' ') || 'ID Verification')}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1 font-mono">
+                        Type: <span className="capitalize">{d.source_table === 'user_documents' ? 'Legal NDA' : 'Identity (KYC)'}</span> • Submitted: {new Date(d.created_at).toLocaleString()}
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${d.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${d.status === 'approved' ? 'bg-green-100 text-green-700' : d.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
                         {d.status?.toUpperCase()}
                       </span>
                       {(d.status === 'pending' || d.status === 'rejected') && (
                         <div className="flex gap-2">
                           <button onClick={() => approveDocument(d.id, d.source_table)} className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-xl hover:bg-green-700 transition-colors">
-                            {d.status === 'rejected' ? 'Approve Rejected KYC' : 'Approve KYC'}
+                            {d.source_table === 'user_documents' ? 'Approve NDA' : (d.status === 'rejected' ? 'Approve Rejected KYC' : 'Approve KYC')}
                           </button>
                           {d.status === 'pending' && (
                             <button onClick={() => rejectDocument(d.id, d.source_table)} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-xl hover:bg-red-700 transition-colors">
-                              Reject KYC
+                              {d.source_table === 'user_documents' ? 'Reject NDA' : 'Reject KYC'}
                             </button>
                           )}
                         </div>

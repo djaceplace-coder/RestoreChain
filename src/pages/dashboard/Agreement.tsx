@@ -101,6 +101,15 @@ export default function Agreement() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-8">
+          {agreementStatus === 'rejected' && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-2">
+              <h3 className="font-bold text-red-800 text-base mb-1">Previous Submission Rejected by Compliance</h3>
+              <p className="text-sm text-red-700">
+                Your previously submitted agreement was not approved. Please review the updated Master Services Agreement below, ensure your electronic signature is clear, and resubmit for approval.
+              </p>
+            </div>
+          )}
+
           {/* Document Preview */}
           <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
@@ -118,17 +127,17 @@ export default function Agreement() {
                 <div className="text-center mb-10 border-b-2 border-gray-900 pb-6">
                   <h1 className="text-2xl md:text-3xl font-bold uppercase tracking-widest text-black mb-2">Tracefield</h1>
                   <p className="text-gray-500">MASTER SERVICES AGREEMENT & TERMS OF USE</p>
-                  <p className="text-xs text-gray-400 mt-2">London, UK | info@tracefield.co.uk</p>
+                  <p className="text-xs text-gray-400 mt-2">London, UK | compliance@tracefield.co.uk</p>
                 </div>
                 
                 <p className="mb-4 text-right">Date: {new Date().toLocaleDateString()}</p>
                 <p className="mb-8 font-bold">Client Account: {profile?.email}</p>
 
                 <div className="space-y-6 text-justify">
-                  <p>This Master Services Agreement (this "Agreement") is entered into by and between Tracefield Ltd. ("Company") and the Client listed above, governing the usage of the Tracefield platform, cryptographic asset recovery services, and secure portfolio management.</p>
+                  <p>This Master Services Agreement (this "Agreement") is entered into by and between Tracefield Ltd. ("Company") and the Client listed above, governing the usage of the Tracefield platform, forensic blockchain tracking and court-admissible asset tracing, and institutional portfolio management.</p>
                   
                   <h4 className="font-bold text-lg mt-6 mb-2">1. Scope of Services & Opportunities</h4>
-                  <p>Tracefield provides advanced cryptographic tracking, asset recovery, and institutional-grade portfolio management. Clients have the opportunity to access decentralized finance (DeFi) tools, high-yield staking options, and tax-loss harvesting utilities under our secure custodial infrastructure.</p>
+                  <p>Tracefield provides advanced cryptographic tracking, evidentiary chain-of-custody reporting for law enforcement submission, and institutional-grade portfolio management. Clients have the opportunity to access decentralized finance (DeFi) tools, high-yield staking options, and tax-loss harvesting utilities under our secure custodial infrastructure.</p>
                   
                   <h4 className="font-bold text-lg mt-6 mb-2">2. Client Acknowledgements</h4>
                   <p>The Client agrees that all deposits, withdrawals, and trades are subject to rigorous AML/KYC checks. The Client understands the inherent risks associated with digital assets and holds Tracefield harmless from losses due to extreme market volatility.</p>

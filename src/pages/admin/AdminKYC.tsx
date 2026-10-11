@@ -1,215 +1,911 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Loader2, CheckCircle, FileText, Check } from 'lucide-react';
+import { 
+  Loader2, CheckCircle2, XCircle, FileText, Check, X, 
+  Search, RefreshCw, Eye, ShieldCheck, Clock, User, 
+  MapPin, Globe, DollarSign, ZoomIn, ExternalLink, Download
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+interface KycDocument {
+  id: string;
+  user_id: string;
+  document_type: string;
+  document_url?: string;
+  document_back_url?: string;
+  selfie_url?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  profiles?: {
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+    address?: string;
+    preferred_currency?: string;
+    preferred_language?: string;
+    kyc_status?: string;
+  };
+}
+
+interface NdaDocument {
+  id: string;
+  user_id: string;
+  document_type: string;
+  signature_data?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  profiles?: {
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+    kyc_status?: string;
+  };
+}
+
 export default function AdminKYC() {
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [kycDocs, setKycDocs] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<NdaDocument[]>([]);
+  const [kycDocs, setKycDocs] = useState<KycDocument[]>([]);
   const [activeTab, setActiveTab] = useState<'kyc' | 'nda'>('kyc');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedImage, setSelectedImage] = useState<{ url: string; title: string } | null>(null);
+  const [selectedNdaModal, setSelectedNdaModal] = useState<NdaDocument | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     fetchDocuments();
+
+    // Subscribe to realtime changes on both kyc_documents and user_documents
+    const channel = supabase.channel('admin_kyc_nda_changes-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kyc_documents' }, () => {
+        fetchDocuments(false);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_documents' }, () => {
+        fetchDocuments(false);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        fetchDocuments(false);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  const fetchDocuments = async () => {
-    // We want to fetch pending documents first, and we need the user's email/name from profiles
-    // We can join the profiles table since user_documents has a foreign key to profiles(id)
-    const { data: ndaData } = await supabase
-      .from('user_documents')
-      .select('*, profiles(email, first_name, last_name)')
-      .order('created_at', { ascending: false });
-
-    if (ndaData) {
-      setDocuments(ndaData);
+  // Clear toast after 4 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
     }
-    
-    const { data: kycData } = await supabase
-      .from('kyc_documents')
-      .select('*, profiles(email, first_name, last_name)')
-      .order('created_at', { ascending: false });
+  }, [toast]);
+
+  const fetchDocuments = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      // 1. Fetch profiles lookup map so we NEVER display empty user names or emails
+      const { data: allProfiles } = await supabase
+        .from('profiles')
+        .select('id, email, first_name, last_name, address, preferred_currency, preferred_language, kyc_status');
       
-    if (kycData) {
-      setKycDocs(kycData);
+      const profileMap: Record<string, any> = {};
+      if (allProfiles) {
+        allProfiles.forEach((p: any) => {
+          profileMap[p.id] = p;
+        });
+      }
+
+      // 2. Resilient fetch for KYC documents
+      let kycList: any[] = [];
+      const { data: kycWithJoin, error: kycJoinErr } = await supabase
+        .from('kyc_documents')
+        .select('*, profiles(email, first_name, last_name, address, preferred_currency, preferred_language, kyc_status)')
+        .order('created_at', { ascending: false });
+
+      if (!kycJoinErr && kycWithJoin && kycWithJoin.length > 0) {
+        kycList = kycWithJoin;
+      } else {
+        // Fallback: direct select if join has schema/FK cache issue
+        const { data: kycDirect } = await supabase
+          .from('kyc_documents')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (kycDirect) {
+          kycList = kycDirect;
+        }
+      }
+
+      // Merge profile information gracefully
+      const hydratedKyc: KycDocument[] = kycList.map((d: any) => {
+        const p = d.profiles || profileMap[d.user_id] || {};
+        return {
+          id: d.id,
+          user_id: d.user_id,
+          document_type: d.document_type || 'ID Document',
+          document_url: d.document_url,
+          document_back_url: d.document_back_url,
+          selfie_url: d.selfie_url,
+          status: (d.status || 'pending').toLowerCase() as any,
+          created_at: d.created_at || new Date().toISOString(),
+          profiles: {
+            email: p.email || 'No email attached',
+            first_name: p.first_name || '',
+            last_name: p.last_name || '',
+            address: p.address || '',
+            preferred_currency: p.preferred_currency || 'USD',
+            preferred_language: p.preferred_language || 'en',
+            kyc_status: p.kyc_status || d.status
+          }
+        };
+      });
+      setKycDocs(hydratedKyc);
+
+      // 3. Resilient fetch for NDA (user_documents)
+      let ndaList: any[] = [];
+      const { data: ndaWithJoin, error: ndaJoinErr } = await supabase
+        .from('user_documents')
+        .select('*, profiles(email, first_name, last_name, kyc_status)')
+        .order('created_at', { ascending: false });
+
+      if (!ndaJoinErr && ndaWithJoin && ndaWithJoin.length > 0) {
+        ndaList = ndaWithJoin;
+      } else {
+        const { data: ndaDirect } = await supabase
+          .from('user_documents')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (ndaDirect) {
+          ndaList = ndaDirect;
+        }
+      }
+
+      const hydratedNda: NdaDocument[] = ndaList.map((d: any) => {
+        const p = d.profiles || profileMap[d.user_id] || {};
+        return {
+          id: d.id,
+          user_id: d.user_id,
+          document_type: d.document_type || 'terms_agreement',
+          signature_data: d.signature_data,
+          status: (d.status || 'pending').toLowerCase() as any,
+          created_at: d.created_at || new Date().toISOString(),
+          profiles: {
+            email: p.email || 'No email attached',
+            first_name: p.first_name || '',
+            last_name: p.last_name || '',
+            kyc_status: p.kyc_status || 'unverified'
+          }
+        };
+      });
+      setDocuments(hydratedNda);
+
+    } catch (err) {
+      console.error('Error in fetchDocuments:', err);
+    } finally {
+      if (showLoading) setLoading(false);
     }
-
-    setLoading(false);
-  };
-
-  const approveNda = async (docId: string, userId: string) => {
-    await supabase.from('user_documents').update({ status: 'approved' }).eq('id', docId);
-    fetchDocuments();
   };
 
   const handleKycAction = async (docId: string, userId: string, action: 'approved' | 'rejected') => {
-    await supabase.from('kyc_documents').update({ status: action }).eq('id', docId);
-    await supabase.from('profiles').update({ kyc_status: action }).eq('id', userId);
-    fetchDocuments();
+    setActionLoadingId(docId);
+    try {
+      // 1. Try RPC execution first
+      const { error: rpcErr } = await supabase.rpc('admin_update_kyc_status', {
+        target_user_id: userId,
+        doc_id: docId,
+        source_table: 'kyc_documents',
+        new_status: action
+      });
+
+      if (rpcErr) {
+        console.warn('RPC failed, falling back to direct table updates:', rpcErr);
+        // Fallback direct table updates
+        await supabase.from('kyc_documents').update({ status: action }).eq('id', docId);
+        await supabase.from('profiles').update({ kyc_status: action }).eq('id', userId);
+      }
+
+      // Send a system notification to the client
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: action === 'approved' ? 'system' : 'warning',
+        title: action === 'approved' ? 'Identity Verification Approved' : 'Identity Verification Rejected',
+        message: action === 'approved'
+          ? 'Your identity documents have been verified and approved by compliance. You now have full access to all platform features.'
+          : 'Your submitted identity documents were not approved by compliance. Please review requirements and submit clear, valid documents.'
+      });
+
+      setToast({
+        type: 'success',
+        message: `KYC verification marked as ${action.toUpperCase()} successfully.`
+      });
+
+      await fetchDocuments(false);
+    } catch (err: any) {
+      console.error('Error handling KYC action:', err);
+      setToast({
+        type: 'error',
+        message: err.message || 'Failed to update KYC status.'
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleNdaAction = async (docId: string, userId: string, action: 'approved' | 'rejected') => {
+    setActionLoadingId(docId);
+    try {
+      // 1. Try RPC execution
+      const { error: rpcErr } = await supabase.rpc('admin_update_kyc_status', {
+        target_user_id: userId,
+        doc_id: docId,
+        source_table: 'user_documents',
+        new_status: action
+      });
+
+      if (rpcErr) {
+        console.warn('RPC failed, falling back to direct table update for user_documents:', rpcErr);
+        await supabase.from('user_documents').update({ status: action }).eq('id', docId);
+      }
+
+      // Send a system notification to the client
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: action === 'approved' ? 'system' : 'warning',
+        title: action === 'approved' ? 'Agreement & NDA Approved' : 'Agreement & NDA Rejected',
+        message: action === 'approved'
+          ? 'Your signed Master Services Agreement and Mutual NDA has been countersigned and approved.'
+          : 'Your Master Services Agreement was not approved. Please review the terms and re-sign from the Agreement page.'
+      });
+
+      setToast({
+        type: 'success',
+        message: `Master Services Agreement (NDA) marked as ${action.toUpperCase()} successfully.`
+      });
+
+      if (selectedNdaModal?.id === docId) {
+        setSelectedNdaModal(null);
+      }
+
+      await fetchDocuments(false);
+    } catch (err: any) {
+      console.error('Error handling NDA action:', err);
+      setToast({
+        type: 'error',
+        message: err.message || 'Failed to update NDA status.'
+      });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Filtered lists
+  const pendingKycCount = kycDocs.filter(d => d.status === 'pending').length;
+  const pendingNdaCount = documents.filter(d => d.status === 'pending').length;
+
+  const filteredKycDocs = kycDocs.filter(d => {
+    const matchesStatus = statusFilter === 'all' || d.status === statusFilter;
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return matchesStatus;
+    const name = `${d.profiles?.first_name || ''} ${d.profiles?.last_name || ''}`.toLowerCase();
+    const email = (d.profiles?.email || '').toLowerCase();
+    const docType = (d.document_type || '').toLowerCase();
+    return matchesStatus && (name.includes(q) || email.includes(q) || docType.includes(q) || d.id.includes(q));
+  });
+
+  const filteredNdaDocs = documents.filter(d => {
+    const matchesStatus = statusFilter === 'all' || d.status === statusFilter;
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return matchesStatus;
+    const name = `${d.profiles?.first_name || ''} ${d.profiles?.last_name || ''}`.toLowerCase();
+    const email = (d.profiles?.email || '').toLowerCase();
+    return matchesStatus && (name.includes(q) || email.includes(q) || d.id.includes(q));
+  });
+
+  const formatDocType = (type: string) => {
+    if (!type) return 'Identity Document';
+    const lower = type.toLowerCase();
+    if (lower.includes('passport')) return 'International Passport';
+    if (lower.includes('driver')) return "Driver's License";
+    if (lower.includes('national')) return 'National Identity Card';
+    if (lower.includes('ssn')) return 'Social Security Card (SSN)';
+    return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   return (
-    <div className="animate-fade-in">
-      <header className="mb-6">
-        <h1 className="text-3xl font-display font-bold text-brand-dark mb-2">Identity & Documents</h1>
-        <p className="text-gray-500">Review KYC identity verifications and Master Service Agreements.</p>
-      </header>
-      
-      <div className="flex gap-4 mb-6 border-b border-gray-200">
-        <button 
-          onClick={() => setActiveTab('kyc')} 
-          className={`pb-3 font-bold transition-colors ${activeTab === 'kyc' ? 'border-b-2 border-brand-purple text-brand-purple' : 'text-gray-500 hover:text-gray-900'}`}
+    <div className="animate-fade-in pb-16">
+      {/* Toast Banner */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm font-bold border transition-all animate-bounce-subtle ${
+          toast.type === 'success' 
+            ? 'bg-emerald-900 text-white border-emerald-700' 
+            : 'bg-red-900 text-white border-red-700'
+        }`}>
+          {toast.type === 'success' ? <CheckCircle2 size={18} className="text-emerald-400" /> : <XCircle size={18} className="text-red-400" />}
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 opacity-70 hover:opacity-100">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-display font-bold text-brand-dark mb-1">Compliance, KYC & NDAs</h1>
+          <p className="text-gray-500 text-sm">
+            Review identity verifications, verify photographic credentials, and validate signed Master Service Agreements.
+          </p>
+        </div>
+        <button
+          onClick={() => fetchDocuments(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-brand-dark text-sm font-bold rounded-xl hover:bg-gray-50 transition-colors shadow-sm self-start md:self-auto"
         >
-          KYC Verifications
-        </button>
-        <button 
-          onClick={() => setActiveTab('nda')} 
-          className={`pb-3 font-bold transition-colors ${activeTab === 'nda' ? 'border-b-2 border-brand-purple text-brand-purple' : 'text-gray-500 hover:text-gray-900'}`}
-        >
-          NDAs / Agreements
+          <RefreshCw size={16} className={loading ? 'animate-spin text-brand-purple' : 'text-gray-500'} />
+          Refresh Queue
         </button>
       </div>
 
-      {selectedImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setSelectedImage(null)}>
-          <img src={selectedImage} alt="Expanded" className="max-w-full max-h-full rounded-xl object-contain" />
+      {/* Primary Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 mb-6">
+        <div className="flex gap-2 sm:gap-6">
+          <button
+            onClick={() => setActiveTab('kyc')}
+            className={`pb-3 font-bold text-sm sm:text-base flex items-center gap-2 transition-colors relative ${
+              activeTab === 'kyc'
+                ? 'border-b-2 border-brand-purple text-brand-purple'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <ShieldCheck size={18} />
+            <span>KYC Verifications</span>
+            {pendingKycCount > 0 && (
+              <span className="px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-800 rounded-full border border-amber-200">
+                {pendingKycCount} pending
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('nda')}
+            className={`pb-3 font-bold text-sm sm:text-base flex items-center gap-2 transition-colors relative ${
+              activeTab === 'nda'
+                ? 'border-b-2 border-brand-purple text-brand-purple'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <FileText size={18} />
+            <span>Master Agreements & NDAs</span>
+            {pendingNdaCount > 0 && (
+              <span className="px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-800 rounded-full border border-amber-200">
+                {pendingNdaCount} pending
+              </span>
+            )}
+          </button>
         </div>
-      )}
-      
+
+        {/* Filter controls */}
+        <div className="flex items-center gap-3 pb-3">
+          <div className="flex bg-gray-100 p-1 rounded-xl text-xs font-bold">
+            {(['all', 'pending', 'approved', 'rejected'] as const).map(status => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
+                  statusFilter === status
+                    ? 'bg-white text-brand-dark shadow-sm'
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by user name, email, or ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand-purple shadow-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content Area */}
       {loading ? (
-        <div className="flex justify-center p-12">
-          <Loader2 className="animate-spin text-red-500" size={32} />
+        <div className="flex flex-col items-center justify-center p-16 bg-white rounded-2xl border border-gray-200">
+          <Loader2 className="animate-spin text-brand-purple mb-4" size={36} />
+          <p className="text-gray-500 font-bold text-sm">Loading compliance queue...</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {activeTab === 'kyc' && kycDocs.map(d => (
-            <div key={d.id} className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <Link to={`/admin/users/${d.user_id}`} className="font-bold text-brand-dark text-lg hover:text-brand-purple transition-colors">
-                    {d.profiles?.first_name} {d.profiles?.last_name} <span className="text-gray-500 font-normal">({d.profiles?.email})</span>
-                  </Link>
-                  <p className="font-bold text-gray-500 capitalize mt-1 text-sm">{d.document_type}</p>
-                  <p className="text-xs text-gray-400 mt-1">Submitted: {new Date(d.created_at).toLocaleString()}</p>
-                </div>
-                <div className="flex flex-col sm:items-end gap-3">
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full ${d.status === 'approved' ? 'bg-green-100 text-green-700' : d.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                    {d.status.toUpperCase()}
-                  </span>
-                  {d.status === 'pending' && (
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleKycAction(d.id, d.user_id, 'rejected')} 
-                        className="px-4 py-2 border border-red-200 text-red-600 bg-red-50 text-sm font-bold rounded-lg hover:bg-red-100 transition-colors"
-                      >
-                        Reject
-                      </button>
-                      <button 
-                        onClick={() => handleKycAction(d.id, d.user_id, 'approved')} 
-                        className="px-6 py-2 bg-brand-purple text-white text-sm font-bold rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
-                      >
-                        Approve KYC
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="mt-4 border-t border-gray-100 pt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                {d.document_url && (
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 mb-2 uppercase flex items-center gap-2">
-                      <FileText size={14} /> ID Front
-                    </p>
-                    <div 
-                      className="bg-gray-50 border border-gray-200 rounded-lg p-2 cursor-pointer hover:border-brand-purple transition-colors"
-                      onClick={() => setSelectedImage(d.document_url)}
-                    >
-                      <img src={d.document_url} alt="ID Front" className="w-full h-48 object-cover rounded" />
-                    </div>
-                  </div>
-                )}
-                {d.document_back_url && (
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 mb-2 uppercase flex items-center gap-2">
-                      <FileText size={14} /> ID Back
-                    </p>
-                    <div 
-                      className="bg-gray-50 border border-gray-200 rounded-lg p-2 cursor-pointer hover:border-brand-purple transition-colors"
-                      onClick={() => setSelectedImage(d.document_back_url)}
-                    >
-                      <img src={d.document_back_url} alt="ID Back" className="w-full h-48 object-cover rounded" />
-                    </div>
-                  </div>
-                )}
-                {d.selfie_url && (
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 mb-2 uppercase flex items-center gap-2">
-                      <FileText size={14} /> Selfie
-                    </p>
-                    <div 
-                      className="bg-gray-50 border border-gray-200 rounded-lg p-2 cursor-pointer hover:border-brand-purple transition-colors"
-                      onClick={() => setSelectedImage(d.selfie_url)}
-                    >
-                      <img src={d.selfie_url} alt="Selfie" className="w-full h-48 object-cover rounded" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+        <div className="space-y-6">
+          {/* TAB 1: KYC VERIFICATIONS */}
+          {activeTab === 'kyc' && (
+            <>
+              {filteredKycDocs.map((d) => (
+                <div key={d.id} className="p-6 border border-gray-200 rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow">
+                  {/* Top Bar: User details + Status badge + Actions */}
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <Link
+                          to={`/admin/users/${d.user_id}`}
+                          className="font-bold text-brand-dark text-lg hover:text-brand-purple transition-colors flex items-center gap-1.5"
+                        >
+                          <span>{d.profiles?.first_name || 'Verified'} {d.profiles?.last_name || 'Client'}</span>
+                          <ExternalLink size={14} className="text-gray-400 inline" />
+                        </Link>
+                        <span className="text-sm text-gray-500 font-mono">({d.profiles?.email})</span>
+                      </div>
 
-          {activeTab === 'kyc' && kycDocs.length === 0 && (
-            <div className="bg-white p-12 text-center rounded-xl border border-gray-200">
-              <CheckCircle className="mx-auto text-gray-300 mb-4" size={48} />
-              <p className="font-bold text-brand-dark">No KYC Verifications</p>
-              <p className="text-gray-500 text-sm mt-1">The approval queue is currently empty.</p>
-            </div>
-          )}
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                        <span className="px-2.5 py-0.5 rounded-md bg-purple-50 text-brand-purple font-bold border border-purple-100">
+                          {formatDocType(d.document_type)}
+                        </span>
+                        <span className="flex items-center gap-1 text-gray-400">
+                          <Clock size={13} />
+                          Submitted {new Date(d.created_at).toLocaleString()}
+                        </span>
+                        {d.profiles?.address && (
+                          <span className="flex items-center gap-1 text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                            <MapPin size={12} className="text-gray-400" />
+                            {d.profiles.address}
+                          </span>
+                        )}
+                        {d.profiles?.preferred_currency && (
+                          <span className="flex items-center gap-1 text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                            <DollarSign size={12} className="text-gray-400" />
+                            {d.profiles.preferred_currency}
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-          {activeTab === 'nda' && documents.map(d => (
-            <div key={d.id} className="p-6 border border-gray-200 rounded-xl bg-white shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <Link to={`/admin/users/${d.user_id}`} className="font-bold text-brand-dark text-lg hover:text-red-600 transition-colors">
-                    {d.profiles?.first_name} {d.profiles?.last_name} ({d.profiles?.email})
-                  </Link>
-                  <p className="font-bold text-gray-500 uppercase mt-1 text-sm">{d.document_type.replace('_', ' ')}</p>
-                  <p className="text-xs text-gray-400 mt-1">Submitted: {new Date(d.created_at).toLocaleString()}</p>
+                    <div className="flex items-center gap-3 self-start lg:self-auto">
+                      <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                        d.status === 'approved'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          : d.status === 'rejected'
+                          ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                          : 'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}>
+                        {d.status}
+                      </span>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2">
+                        {d.status !== 'rejected' && (
+                          <button
+                            disabled={actionLoadingId === d.id}
+                            onClick={() => handleKycAction(d.id, d.user_id, 'rejected')}
+                            className="px-3.5 py-2 border border-rose-200 text-rose-700 bg-rose-50 text-xs font-bold rounded-xl hover:bg-rose-100 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                          >
+                            <X size={14} />
+                            <span>Reject</span>
+                          </button>
+                        )}
+                        {d.status !== 'approved' && (
+                          <button
+                            disabled={actionLoadingId === d.id}
+                            onClick={() => handleKycAction(d.id, d.user_id, 'approved')}
+                            className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+                          >
+                            {actionLoadingId === d.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                            <span>Approve KYC</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Document Photos Grid */}
+                  <div className="pt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Front ID */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <FileText size={14} className="text-gray-400" />
+                        <span>1. Document Front</span>
+                      </p>
+                      {d.document_url ? (
+                        <div
+                          onClick={() => setSelectedImage({ url: d.document_url!, title: `${formatDocType(d.document_type)} - Front` })}
+                          className="group relative bg-gray-50 border border-gray-200 rounded-xl p-2 cursor-pointer hover:border-brand-purple hover:shadow transition-all overflow-hidden h-44 flex items-center justify-center"
+                        >
+                          <img
+                            src={d.document_url}
+                            alt="Front Document"
+                            className="max-h-full max-w-full object-contain rounded group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1 rounded-xl">
+                            <ZoomIn size={16} /> Click to Inspect
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-44 bg-gray-50 border border-dashed border-gray-200 rounded-xl flex items-center justify-center text-gray-400 text-xs">
+                          No front photo attached
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Back ID */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <FileText size={14} className="text-gray-400" />
+                        <span>2. Document Back</span>
+                      </p>
+                      {d.document_back_url ? (
+                        <div
+                          onClick={() => setSelectedImage({ url: d.document_back_url!, title: `${formatDocType(d.document_type)} - Back` })}
+                          className="group relative bg-gray-50 border border-gray-200 rounded-xl p-2 cursor-pointer hover:border-brand-purple hover:shadow transition-all overflow-hidden h-44 flex items-center justify-center"
+                        >
+                          <img
+                            src={d.document_back_url}
+                            alt="Back Document"
+                            className="max-h-full max-w-full object-contain rounded group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1 rounded-xl">
+                            <ZoomIn size={16} /> Click to Inspect
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-44 bg-gray-50 border border-dashed border-gray-200 rounded-xl flex items-center justify-center text-gray-400 text-xs">
+                          Back not required or unattached
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Selfie Verification */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <User size={14} className="text-gray-400" />
+                        <span>3. Identity Selfie</span>
+                      </p>
+                      {d.selfie_url ? (
+                        <div
+                          onClick={() => setSelectedImage({ url: d.selfie_url!, title: `User Identity Selfie - ${d.profiles?.email}` })}
+                          className="group relative bg-gray-50 border border-gray-200 rounded-xl p-2 cursor-pointer hover:border-brand-purple hover:shadow transition-all overflow-hidden h-44 flex items-center justify-center"
+                        >
+                          <img
+                            src={d.selfie_url}
+                            alt="Identity Selfie"
+                            className="max-h-full max-w-full object-contain rounded group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1 rounded-xl">
+                            <ZoomIn size={16} /> Click to Inspect
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-44 bg-gray-50 border border-dashed border-gray-200 rounded-xl flex items-center justify-center text-gray-400 text-xs">
+                          No selfie photo attached
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col sm:items-end gap-3">
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full ${d.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                    {d.status.toUpperCase()}
-                  </span>
-                  {d.status === 'pending' && (
-                    <button 
-                      onClick={() => approveNda(d.id, d.user_id)} 
-                      className="px-6 py-2.5 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-colors shadow-sm"
-                    >
-                      Approve Document
-                    </button>
-                  )}
-                </div>
-              </div>
-              {d.signature_data && (
-                <div className="mt-4 border-t border-gray-100 pt-4">
-                  <p className="text-xs font-bold text-gray-400 mb-2 uppercase flex items-center gap-2">
-                    <FileText size={14} /> User E-Signature
+              ))}
+
+              {filteredKycDocs.length === 0 && (
+                <div className="bg-white p-16 text-center rounded-2xl border border-gray-200">
+                  <CheckCircle2 className="mx-auto text-emerald-500 mb-3" size={48} />
+                  <p className="font-bold text-brand-dark text-lg">No KYC Documents in this view</p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    {statusFilter !== 'all' 
+                      ? `There are no documents matching the status filter "${statusFilter}".` 
+                      : 'All client identity verifications have been processed.'}
                   </p>
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 inline-block">
-                    <img src={d.signature_data} alt="Signature" className="max-h-24 mix-blend-multiply" />
-                  </div>
                 </div>
               )}
-            </div>
-          ))}
-          {activeTab === 'nda' && documents.length === 0 && (
-            <div className="bg-white p-12 text-center rounded-xl border border-gray-200">
-              <CheckCircle className="mx-auto text-gray-300 mb-4" size={48} />
-              <p className="font-bold text-brand-dark">No NDAs Found</p>
-              <p className="text-gray-500 text-sm mt-1">The approval queue is currently empty.</p>
-            </div>
+            </>
           )}
+
+          {/* TAB 2: MASTER AGREEMENTS & NDAs */}
+          {activeTab === 'nda' && (
+            <>
+              {filteredNdaDocs.map((d) => (
+                <div key={d.id} className="p-6 border border-gray-200 rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <Link
+                          to={`/admin/users/${d.user_id}`}
+                          className="font-bold text-brand-dark text-lg hover:text-brand-purple transition-colors flex items-center gap-1.5"
+                        >
+                          <span>{d.profiles?.first_name || 'Client'} {d.profiles?.last_name || 'Agreement'}</span>
+                          <ExternalLink size={14} className="text-gray-400 inline" />
+                        </Link>
+                        <span className="text-sm text-gray-500 font-mono">({d.profiles?.email})</span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                        <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 font-bold border border-blue-100">
+                          Master Services Agreement & Mutual NDA
+                        </span>
+                        <span className="text-gray-400 font-mono">
+                          Ref: TF-MSA-{d.id.slice(0, 8).toUpperCase()}
+                        </span>
+                        <span className="flex items-center gap-1 text-gray-400">
+                          <Clock size={13} />
+                          Signed & Submitted: {new Date(d.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 self-start lg:self-auto">
+                      <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                        d.status === 'approved'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          : d.status === 'rejected'
+                          ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                          : 'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}>
+                        {d.status}
+                      </span>
+
+                      {/* Modal preview trigger */}
+                      <button
+                        onClick={() => setSelectedNdaModal(d)}
+                        className="px-3.5 py-2 bg-gray-100 text-brand-dark text-xs font-bold rounded-xl hover:bg-gray-200 transition-colors flex items-center gap-1.5"
+                      >
+                        <Eye size={14} />
+                        <span>View Signed Agreement</span>
+                      </button>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2">
+                        {d.status !== 'rejected' && (
+                          <button
+                            disabled={actionLoadingId === d.id}
+                            onClick={() => handleNdaAction(d.id, d.user_id, 'rejected')}
+                            className="px-3.5 py-2 border border-rose-200 text-rose-700 bg-rose-50 text-xs font-bold rounded-xl hover:bg-rose-100 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                          >
+                            <X size={14} />
+                            <span>Reject</span>
+                          </button>
+                        )}
+                        {d.status !== 'approved' && (
+                          <button
+                            disabled={actionLoadingId === d.id}
+                            onClick={() => handleNdaAction(d.id, d.user_id, 'approved')}
+                            className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+                          >
+                            {actionLoadingId === d.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                            <span>Approve Agreement</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Document Signature Preview Bar */}
+                  <div className="pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <FileText size={20} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-brand-dark">Legally Binding Cryptographic E-Signature</p>
+                        <p className="text-xs text-gray-500">Client verified terms and executed digital signature on submission.</p>
+                      </div>
+                    </div>
+
+                    {d.signature_data ? (
+                      <div 
+                        onClick={() => setSelectedNdaModal(d)}
+                        className="bg-white border border-gray-200 rounded-xl p-2 px-4 flex items-center gap-3 cursor-pointer hover:border-brand-purple transition-colors max-w-xs"
+                      >
+                        <span className="text-xs font-bold text-gray-400 uppercase">Signature:</span>
+                        <img src={d.signature_data} alt="Client Signature" className="h-10 max-w-[140px] object-contain mix-blend-multiply" />
+                        <Eye size={14} className="text-gray-400 ml-auto" />
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">No signature artifact recorded</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {filteredNdaDocs.length === 0 && (
+                <div className="bg-white p-16 text-center rounded-2xl border border-gray-200">
+                  <CheckCircle2 className="mx-auto text-emerald-500 mb-3" size={48} />
+                  <p className="font-bold text-brand-dark text-lg">No Master Agreements in this view</p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    {statusFilter !== 'all' 
+                      ? `There are no agreements matching the status filter "${statusFilter}".` 
+                      : 'All client agreements have been reviewed.'}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* LIGHTBOX MODAL FOR ZOOMING KYC IMAGES */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 animate-fade-in backdrop-blur-sm"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full flex items-center justify-between text-white pb-3">
+              <span className="font-bold text-sm">{selectedImage.title}</span>
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="bg-black/40 rounded-2xl overflow-hidden border border-white/10 p-2 flex items-center justify-center max-h-[80vh] w-full">
+              <img
+                src={selectedImage.url}
+                alt={selectedImage.title}
+                className="max-w-full max-h-[75vh] object-contain rounded-xl"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FULL SIGNED AGREEMENT MODAL FOR NDAS */}
+      {selectedNdaModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 animate-fade-in backdrop-blur-sm"
+          onClick={() => setSelectedNdaModal(null)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50 rounded-t-2xl sticky top-0 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 text-brand-purple flex items-center justify-center">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-brand-dark text-base">
+                    Master Services Agreement & Mutual NDA
+                  </h3>
+                  <p className="text-xs text-gray-500 font-mono">
+                    Ref: TF-MSA-{selectedNdaModal.id.slice(0, 8).toUpperCase()} • Status: <span className="uppercase font-bold">{selectedNdaModal.status}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedNdaModal(null)}
+                className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Agreement Document Content */}
+            <div className="p-8 md:p-12 text-sm text-gray-800 font-serif leading-relaxed bg-white space-y-6">
+              <div className="text-center border-b-2 border-gray-900 pb-6 mb-6">
+                <h1 className="text-2xl font-bold uppercase tracking-widest text-black mb-1 font-sans">
+                  Tracefield Forensic Intelligence Ltd
+                </h1>
+                <p className="text-gray-600 font-sans text-xs uppercase tracking-wider">
+                  MASTER SERVICES AGREEMENT & MUTUAL CONFIDENTIALITY TERMS
+                </p>
+                <p className="text-xs text-gray-400 font-sans mt-1">London, United Kingdom • compliance@tracefield.co.uk</p>
+              </div>
+
+              <div className="flex justify-between text-xs font-sans text-gray-500 border-b border-gray-100 pb-3">
+                <span>Date: {new Date(selectedNdaModal.created_at).toLocaleDateString()}</span>
+                <span>Account: <strong>{selectedNdaModal.profiles?.email}</strong></span>
+              </div>
+
+              <div className="space-y-4 text-justify">
+                <p>
+                  This Master Services Agreement and Mutual Non-Disclosure Terms (this "Agreement") is entered into between Tracefield Forensic Intelligence Ltd. ("Company") and the Client listed above, governing on-chain evidentiary asset tracing, cryptographic integrity auditing, and institutional portfolio management under UK compliance frameworks.
+                </p>
+
+                <h4 className="font-bold font-sans text-base text-gray-900 mt-4">1. Scope of Services & Forensic Deliverables</h4>
+                <p>
+                  Tracefield delivers mathematical ledger analysis, cryptographic tracking, and court-admissible forensic documentation for submission to legal counsel and law enforcement authorities. All platform engagements follow stringent anti-money laundering (AML) and know-your-customer (KYC) regulatory intake standards.
+                </p>
+
+                <h4 className="font-bold font-sans text-base text-gray-900 mt-4">2. Mutual Confidentiality & Non-Disclosure (NDA)</h4>
+                <p>
+                  Both parties covenant that all transaction hashes, private evidentiary reports, wallet forensics, and communication exchanged shall remain strictly confidential. Neither party shall disclose proprietary methodologies, confidential findings, or client identity without prior statutory or judicial mandate.
+                </p>
+
+                <h4 className="font-bold font-sans text-base text-gray-900 mt-4">3. Custodial Integrity & Statutory Clearances</h4>
+                <p>
+                  The Client acknowledges that assets tracked or managed under Tracefield infrastructure are governed by rigorous cryptographic verification. Disbursements and asset movements are safeguarded through cryptographic multi-signatory protocols and administrative compliance clearance.
+                </p>
+              </div>
+
+              {/* Signatures Dual Block */}
+              <div className="pt-8 border-t-2 border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-8 font-sans">
+                {/* Company Authorized Signature */}
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-gray-500 uppercase">Authorized Corporate Signature</p>
+                  <div className="italic text-2xl text-blue-900 py-1" style={{ fontFamily: "'Brush Script MT', cursive" }}>
+                    Mark Glenn
+                  </div>
+                  <div className="h-px bg-gray-900 w-full"></div>
+                  <p className="font-bold text-xs text-gray-900">Mark Glenn</p>
+                  <p className="text-xs text-gray-500">Head of Forensic Intelligence, Tracefield Ltd</p>
+                </div>
+
+                {/* Client Verified E-Signature */}
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-gray-500 uppercase">Client Execution Signature</p>
+                  {selectedNdaModal.signature_data ? (
+                    <div className="h-10 flex items-center">
+                      <img
+                        src={selectedNdaModal.signature_data}
+                        alt="Client Verified Signature"
+                        className="max-h-10 mix-blend-multiply"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-10 text-xs italic text-gray-400 flex items-center">
+                      Pending electronic signature
+                    </div>
+                  )}
+                  <div className="h-px bg-gray-900 w-full"></div>
+                  <p className="font-bold text-xs text-gray-900">
+                    {selectedNdaModal.profiles?.first_name} {selectedNdaModal.profiles?.last_name || selectedNdaModal.profiles?.email}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Timestamp: {new Date(selectedNdaModal.created_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex items-center justify-between sticky bottom-0 z-10">
+              <button
+                onClick={() => setSelectedNdaModal(null)}
+                className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-gray-900"
+              >
+                Close
+              </button>
+
+              <div className="flex items-center gap-3">
+                {selectedNdaModal.status !== 'rejected' && (
+                  <button
+                    disabled={actionLoadingId === selectedNdaModal.id}
+                    onClick={() => handleNdaAction(selectedNdaModal.id, selectedNdaModal.user_id, 'rejected')}
+                    className="px-4 py-2 border border-rose-200 text-rose-700 bg-rose-50 text-xs font-bold rounded-xl hover:bg-rose-100 transition-colors disabled:opacity-50"
+                  >
+                    Reject Agreement
+                  </button>
+                )}
+                {selectedNdaModal.status !== 'approved' && (
+                  <button
+                    disabled={actionLoadingId === selectedNdaModal.id}
+                    onClick={() => handleNdaAction(selectedNdaModal.id, selectedNdaModal.user_id, 'approved')}
+                    className="px-5 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {actionLoadingId === selectedNdaModal.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                    <span>Approve & Countersign</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
