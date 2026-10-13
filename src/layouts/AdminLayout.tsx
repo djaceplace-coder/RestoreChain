@@ -41,10 +41,12 @@ export default function AdminLayout() {
       const { count: supportCount } = await supabase.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open');
       setSupportQueueCount(supportCount || 0);
 
-      // KYC
+      // KYC & NDAs
       const { count: kycCount } = await supabase.from('kyc_documents').select('*', { count: 'exact', head: true }).eq('status', 'pending');
       const { count: ndaCount } = await supabase.from('user_documents').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-      setPendingKycCount((kycCount || 0) + (ndaCount || 0));
+      const { count: profileKycCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('kyc_status', 'pending');
+      const totalKycPending = Math.max(kycCount || 0, profileKycCount || 0);
+      setPendingKycCount(totalKycPending + (ndaCount || 0));
     };
 
     fetchCounts();
@@ -56,6 +58,7 @@ export default function AdminLayout() {
     const channel2 = supabase.channel('layout_kyc')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'kyc_documents' }, fetchCounts)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'user_documents' }, fetchCounts)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, fetchCounts)
       .subscribe();
       
     return () => { 

@@ -115,6 +115,19 @@ export default function AdminUserDetail() {
     if (kycDocs) {
       combinedDocs = [...combinedDocs, ...kycDocs.map(d => ({ ...d, source_table: 'kyc_documents' }))];
     }
+    if (userData?.kyc_status === 'pending' && (!kycDocs || kycDocs.length === 0)) {
+      combinedDocs.push({
+        id: `profile-${id}`,
+        user_id: id,
+        document_type: 'Identity Verification (Profile Submitted)',
+        status: 'pending',
+        created_at: userData.updated_at || new Date().toISOString(),
+        source_table: 'profiles',
+        document_url: null,
+        document_back_url: null,
+        selfie_url: null
+      });
+    }
     // Sort by created_at descending
     combinedDocs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     setDocuments(combinedDocs);
@@ -379,9 +392,13 @@ const resolveReconIssue = async (issueId: string) => {
 
   const approveDocument = async (docId: string, sourceTable: string = 'user_documents') => {
     try {
-      await supabase.from(sourceTable).update({ status: 'approved' }).eq('id', docId);
-      if (sourceTable === 'kyc_documents') {
+      if (sourceTable === 'profiles') {
         await supabase.from('profiles').update({ kyc_status: 'approved' }).eq('id', id);
+      } else {
+        await supabase.from(sourceTable).update({ status: 'approved' }).eq('id', docId);
+        if (sourceTable === 'kyc_documents') {
+          await supabase.from('profiles').update({ kyc_status: 'approved' }).eq('id', id);
+        }
       }
       fetchUserAndData();
     } catch (err) {
@@ -391,9 +408,13 @@ const resolveReconIssue = async (issueId: string) => {
 
   const rejectDocument = async (docId: string, sourceTable: string = 'user_documents') => {
     try {
-      await supabase.from(sourceTable).update({ status: 'rejected' }).eq('id', docId);
-      if (sourceTable === 'kyc_documents') {
+      if (sourceTable === 'profiles') {
         await supabase.from('profiles').update({ kyc_status: 'rejected' }).eq('id', id);
+      } else {
+        await supabase.from(sourceTable).update({ status: 'rejected' }).eq('id', docId);
+        if (sourceTable === 'kyc_documents') {
+          await supabase.from('profiles').update({ kyc_status: 'rejected' }).eq('id', id);
+        }
       }
       fetchUserAndData();
     } catch (err) {
