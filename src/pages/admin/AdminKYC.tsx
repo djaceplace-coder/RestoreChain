@@ -105,26 +105,20 @@ export default function AdminKYC() {
         });
       }
 
-      // 2. Fetch KYC documents
+      // 2. Fetch KYC documents directly (avoiding joins that trigger PostgreSQL statement timeouts)
       let kycList: any[] = [];
-      const { data: kycWithJoin, error: kycJoinErr } = await supabase
+      const { data: kycDirect, error: kycDirectErr } = await supabase
         .from('kyc_documents')
-        .select('*, profiles(email, first_name, last_name, address, preferred_currency, preferred_language, kyc_status)')
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (!kycJoinErr && kycWithJoin) {
-        kycList = kycWithJoin;
-      } else {
-        // Fallback: direct select if join schema cache has an issue
-        const { data: kycDirect, error: kycDirectErr } = await supabase
-          .from('kyc_documents')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (kycDirect) {
-          kycList = kycDirect;
-        } else if (kycDirectErr) {
-          console.error('kycDirect error:', kycDirectErr);
-          setFetchError(`KYC database query note: ${kycDirectErr.message}`);
+      if (kycDirect) {
+        kycList = kycDirect;
+      } else if (kycDirectErr) {
+        console.warn('kycDirect error:', kycDirectErr);
+        // Only show message if it's not a normal empty state
+        if (!kycDirectErr.message?.includes('0 rows')) {
+          setFetchError(`Database notice: ${kycDirectErr.message}`);
         }
       }
 
@@ -176,25 +170,17 @@ export default function AdminKYC() {
       });
       setKycDocs(hydratedKyc);
 
-      // 3. Resilient fetch for NDA (user_documents)
+      // 3. Resilient fetch for NDA (user_documents) directly
       let ndaList: any[] = [];
-      const { data: ndaWithJoin, error: ndaJoinErr } = await supabase
+      const { data: ndaDirect, error: ndaDirectErr } = await supabase
         .from('user_documents')
-        .select('*, profiles(email, first_name, last_name, kyc_status)')
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (!ndaJoinErr && ndaWithJoin) {
-        ndaList = ndaWithJoin;
-      } else {
-        const { data: ndaDirect, error: ndaDirectErr } = await supabase
-          .from('user_documents')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (ndaDirect) {
-          ndaList = ndaDirect;
-        } else if (ndaDirectErr) {
-          console.error('ndaDirect error:', ndaDirectErr);
-        }
+      if (ndaDirect) {
+        ndaList = ndaDirect;
+      } else if (ndaDirectErr) {
+        console.warn('ndaDirect error:', ndaDirectErr);
       }
 
       const hydratedNda: NdaDocument[] = ndaList.map((d: any) => {
@@ -280,13 +266,30 @@ export default function AdminKYC() {
 
   const handleRequestReupload = async (userId: string, email: string) => {
     try {
-      await supabase.from('notifications').insert({
+      // 1. Dispatch in-app notification to the user
+      const { error: notifErr } = await supabase.from('notifications').insert({
         user_id: userId,
         type: 'warning',
-        title: 'Document Re-upload Requested',
-        message: 'Compliance has requested clearer photographic credentials for your ID. Please open Identity Verification in your dashboard to re-upload clear photos.'
+        title: 'Action Required: ID Re-upload Requested',
+        message: 'Compliance has requested fresh, clearer photographic credentials for your ID. Please open Identity Verification in your Settings or Portfolio to re-upload clear photos.'
       });
+      if (notifErr) {
+        console.warn('Notification insert note:', notifErr);
+      }
+
+      // 2. Set profile kyc_status to unverified so user can immediately re-upload
       await supabase.from('profiles').update({ kyc_status: 'unverified' }).eq('id', userId);
+
+      // 3. Mark existing pending kyc_documents as rejected so they no longer inflate pending badges
+      await supabase.from('kyc_documents')
+        .update({ 
+          status: 'rejected', 
+          rejection_reason: 'Photo re-upload requested by compliance',
+          updated_at: new Date().toISOString() 
+        })
+        .eq('user_id', userId)
+        .eq('status', 'pending');
+
       setToast({
         type: 'success',
         message: `Re-upload request notification dispatched to ${email}.`
@@ -665,6 +668,27 @@ export default function AdminKYC() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Profile-only Notice */}
+                  {d.is_profile_only && (
+                    <div className="mt-4 p-4 bg-amber-50/80 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 animate-fade-in">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-sm text-amber-950">Identity Profile Captured (No Photos in Database)</p>
+                          <p className="text-amber-800 mt-0.5">
+                            This user submitted their address and profile details, but photographic documents were not stored (from a submission prior to image compression). You can request fresh photos or approve them directly.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRequestReupload(d.user_id, d.profiles?.email || '')}
+                        className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shrink-0 transition-colors shadow-sm cursor-pointer"
+                      >
+                        Request Photo Upload
+                      </button>
+                    </div>
+                  )}
 
                   {/* KYC Images Grid: ID Front, ID Back, and Biometric Selfie */}
                   <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-5">

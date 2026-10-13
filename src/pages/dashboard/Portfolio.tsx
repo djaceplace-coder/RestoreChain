@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, ShieldCheck, Loader2, Plus, Download, Wallet, ArrowRight, Building, Globe, Copy, Check, Repeat } from 'lucide-react';
+import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, ShieldCheck, ShieldAlert, Loader2, Plus, Download, Wallet, ArrowRight, Building, Globe, Copy, Check, Repeat } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import AddAssetModal from '../../components/AddAssetModal';
 import KYCRestrictedModal from '../../components/KYCRestrictedModal';
@@ -203,7 +203,47 @@ if (pErr || !userPortfolios || userPortfolios.length === 0) {
       {isWithdrawModalOpen && <WithdrawModal onClose={() => setIsWithdrawModalOpen(false)} user={user} />}
 
       {/* Dynamic Greeting */}
-      <h1 className="text-3xl font-display font-bold text-brand-dark mb-2">{displayGreeting}</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-3xl font-display font-bold text-brand-dark">{displayGreeting}</h1>
+        {userProfile && userProfile.kyc_status !== 'approved' && (
+          <div className="inline-flex items-center gap-2">
+            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+              userProfile.kyc_status === 'pending'
+                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                : 'bg-red-100 text-red-700 border border-red-200'
+            }`}>
+              KYC: {userProfile.kyc_status}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* KYC Alert Banner when verification is required or rejected */}
+      {userProfile && userProfile.kyc_status !== 'approved' && userProfile.kyc_status !== 'pending' && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in shadow-sm">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="text-amber-600 shrink-0 mt-0.5" size={20} />
+            <div>
+              <p className="font-bold text-sm text-amber-950">
+                {userProfile.kyc_status === 'rejected' || userProfile.kyc_status === 'requires_resubmission'
+                  ? 'Identity Verification Needs Attention'
+                  : 'Action Required: Identity Verification (KYC)'}
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                {userProfile.kyc_status === 'rejected' || userProfile.kyc_status === 'requires_resubmission'
+                  ? 'Compliance has requested fresh photographic credentials for your ID. Please submit clear photos to unlock all features.'
+                  : 'Please complete your photographic ID verification to unlock withdrawals and unrestricted trading.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsKYCModalOpen(true)}
+            className="px-4 py-2 bg-brand-purple hover:bg-purple-700 text-white rounded-xl text-xs font-bold shrink-0 transition-colors shadow-sm cursor-pointer"
+          >
+            {userProfile.kyc_status === 'rejected' || userProfile.kyc_status === 'requires_resubmission' ? 'Re-Upload Documents' : 'Verify Identity Now'}
+          </button>
+        </div>
+      )}
 
             {/* Dual Balances Header */}
       <div className="max-w-md">

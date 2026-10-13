@@ -140,7 +140,14 @@ export default function AdminLayout() {
           </Link>
           <Link to="/admin/kyc" onClick={closeMobileMenu} className={navLinkClass('/admin/kyc')}>
             <ShieldAlert size={18} /> KYC Approvals
-            {pendingKycCount > 0 && <span className="ml-auto bg-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">{pendingKycCount}</span>}
+            {pendingKycCount > 0 && (
+              <span 
+                className="ml-auto bg-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm"
+                title={`${pendingKycCount} pending compliance item${pendingKycCount > 1 ? 's' : ''} (KYC verifications + signed NDAs)`}
+              >
+                {pendingKycCount}
+              </span>
+            )}
           </Link>
           <Link to="/admin/support" onClick={closeMobileMenu} className={navLinkClass('/admin/support')}>
             <MessageSquare size={18} /> Support Queue

@@ -39,6 +39,7 @@ export default function DashboardLayout() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [kycStatus, setKycStatus] = useState('pending');
   const [reconCount, setReconCount] = useState(0);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [isKYCModalOpen, setIsKYCModalOpen] = useState(false);
   const [hasSkippedKYC, setHasSkippedKYC] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -57,16 +58,20 @@ export default function DashboardLayout() {
         checkUser();
       }
     });
-  
-  const handleKYCClose = (skipped: boolean) => {
-    setIsKYCModalOpen(false);
-    if (skipped) {
-      setHasSkippedKYC(true);
-      sessionStorage.setItem('kyc_skipped', 'true');
-    }
-  };
-  return () => {
-      authListener.subscription.unsubscribe();
+
+    // Real-time subscription to notifications so badge updates immediately
+    const notifChannel = supabase.channel('user_dashboard_notifs_' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        checkUser();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        checkUser();
+      })
+      .subscribe();
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+      supabase.removeChannel(notifChannel);
     };
   }, [navigate]);
 
@@ -98,6 +103,15 @@ export default function DashboardLayout() {
       
       const { count } = await supabase.from('reconciliation_issues').select('*', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('status', 'open');
       setReconCount(count || 0);
+
+      // Fetch unread notifications count for user
+      const { count: notifCount } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', session.user.id)
+        .eq('is_read', false);
+      setUnreadNotifCount(notifCount || 0);
+
       setIsAuthLoading(false);
     } else {
       navigate('/login');
@@ -224,6 +238,11 @@ export default function DashboardLayout() {
           </Link>
           <Link to="/dashboard/notifications" onClick={closeMobileMenu} className={navLinkClass('/dashboard/notifications')}>
             <Bell size={18} /> Notifications
+            {unreadNotifCount > 0 && (
+              <span className="ml-auto bg-brand-purple text-white px-2 py-0.5 rounded-full text-[10px] font-bold animate-pulse">
+                {unreadNotifCount}
+              </span>
+            )}
           </Link>
           <Link to="/dashboard/support" onClick={closeMobileMenu} className={navLinkClass('/dashboard/support')}>
             <HelpCircle size={18} /> Support
@@ -277,9 +296,13 @@ export default function DashboardLayout() {
           </div>
           <div className="flex items-center gap-4 ml-4 shrink-0">
              <LanguageSwitcher isDark={false} />
-             <Link to="/dashboard/notifications" className="p-2 text-gray-400 hover:text-brand-dark transition-colors relative">
+             <Link to="/dashboard/notifications" className="p-2 text-gray-400 hover:text-brand-dark transition-colors relative" title="Notifications">
                <Bell size={20} />
-               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+               {unreadNotifCount > 0 && (
+                 <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-white animate-pulse">
+                   {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                 </span>
+               )}
              </Link>
           </div>
         </header>

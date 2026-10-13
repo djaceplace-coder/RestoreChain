@@ -165,8 +165,8 @@ export default function Settings() {
                   </div>
                 </div>
                 {profile?.kyc_status !== 'approved' && profile?.kyc_status !== 'pending' && (
-                  <button onClick={() => setIsKYCModalOpen(true)} className="px-4 py-2 bg-brand-purple text-white font-bold rounded-xl text-sm hover:bg-purple-700 transition-colors">
-                    Start Verification
+                  <button onClick={() => setIsKYCModalOpen(true)} className="px-4 py-2 bg-brand-purple text-white font-bold rounded-xl text-sm hover:bg-purple-700 transition-colors shadow-sm">
+                    {profile?.kyc_status === 'rejected' || profile?.kyc_status === 'requires_resubmission' ? 'Re-Upload Documents' : 'Start Verification'}
                   </button>
                 )}
               </div>
