@@ -105,27 +105,47 @@ export default function AdminKYC() {
         });
       }
 
-      // 2. Fetch KYC documents directly (avoiding joins that trigger PostgreSQL statement timeouts)
+      // 2. Fetch KYC documents - Try elevated SECURITY DEFINER RPC first (never times out, bypasses RLS)
       let kycList: any[] = [];
-      const { data: kycDirect, error: kycDirectErr } = await supabase
-        .from('kyc_documents')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let hadKycFetchError = false;
+      const { data: rpcKyc, error: rpcKycErr } = await supabase.rpc('admin_get_kyc_documents');
 
-      if (kycDirect) {
-        kycList = kycDirect;
-      } else if (kycDirectErr) {
-        console.warn('kycDirect error:', kycDirectErr);
-        // Only show message if it's not a normal empty state
-        if (!kycDirectErr.message?.includes('0 rows')) {
-          setFetchError(`Database notice: ${kycDirectErr.message}`);
+      if (rpcKyc && Array.isArray(rpcKyc) && !rpcKycErr) {
+        kycList = rpcKyc.map((item: any) => ({
+          ...item,
+          profiles: {
+            email: item.email || profileMap[item.user_id]?.email || 'No email attached',
+            first_name: item.first_name || profileMap[item.user_id]?.first_name || '',
+            last_name: item.last_name || profileMap[item.user_id]?.last_name || '',
+            address: profileMap[item.user_id]?.address || '',
+            preferred_currency: profileMap[item.user_id]?.preferred_currency || 'USD',
+            preferred_language: profileMap[item.user_id]?.preferred_language || 'en',
+            kyc_status: item.profile_kyc_status || item.status,
+            account_status: item.account_status || 'active'
+          }
+        }));
+      } else {
+        // Direct query fallback
+        const { data: kycDirect, error: kycDirectErr } = await supabase
+          .from('kyc_documents')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (kycDirect) {
+          kycList = kycDirect;
+        } else if (kycDirectErr) {
+          console.warn('kycDirect error:', kycDirectErr);
+          hadKycFetchError = true;
+          if (!kycDirectErr.message?.includes('0 rows')) {
+            setFetchError(`Database notice: ${kycDirectErr.message}`);
+          }
         }
       }
 
-      // Profile Bridging: if a user has kyc_status = 'pending' in profiles but no kyc_documents row
-      // (e.g. earlier failed payload or profile submission), synthesize an entry so they are never lost!
+      // Profile Bridging: only synthesize if there was NO database error
+      // (prevents falsely showing "No photos stored" when the database query simply timed out)
       const userIdsWithKyc = new Set(kycList.map((d: any) => d.user_id));
-      if (allProfiles) {
+      if (allProfiles && !hadKycFetchError) {
         allProfiles.forEach((p: any) => {
           if (p.kyc_status === 'pending' && !userIdsWithKyc.has(p.id)) {
             kycList.push({
@@ -170,17 +190,31 @@ export default function AdminKYC() {
       });
       setKycDocs(hydratedKyc);
 
-      // 3. Resilient fetch for NDA (user_documents) directly
+      // 3. Resilient fetch for NDA (user_documents) - Try RPC first, fallback to direct
       let ndaList: any[] = [];
-      const { data: ndaDirect, error: ndaDirectErr } = await supabase
-        .from('user_documents')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data: rpcNda, error: rpcNdaErr } = await supabase.rpc('admin_get_nda_documents');
 
-      if (ndaDirect) {
-        ndaList = ndaDirect;
-      } else if (ndaDirectErr) {
-        console.warn('ndaDirect error:', ndaDirectErr);
+      if (rpcNda && Array.isArray(rpcNda) && !rpcNdaErr) {
+        ndaList = rpcNda.map((item: any) => ({
+          ...item,
+          profiles: {
+            email: item.email || profileMap[item.user_id]?.email || 'No email attached',
+            first_name: item.first_name || profileMap[item.user_id]?.first_name || '',
+            last_name: item.last_name || profileMap[item.user_id]?.last_name || '',
+            kyc_status: item.profile_kyc_status || 'unverified'
+          }
+        }));
+      } else {
+        const { data: ndaDirect, error: ndaDirectErr } = await supabase
+          .from('user_documents')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (ndaDirect) {
+          ndaList = ndaDirect;
+        } else if (ndaDirectErr) {
+          console.warn('ndaDirect error:', ndaDirectErr);
+        }
       }
 
       const hydratedNda: NdaDocument[] = ndaList.map((d: any) => {

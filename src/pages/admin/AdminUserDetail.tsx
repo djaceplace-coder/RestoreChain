@@ -4,17 +4,22 @@ import {
   Eye, ArrowLeft, Wallet, History, Activity, Receipt, MessageSquare, 
   ShieldAlert, Loader2, CheckCircle, Bitcoin, DollarSign, 
   TrendingUp, RefreshCw, FileText, ArrowRight, Check,
-  PlusCircle, MinusCircle, Trash2
+  PlusCircle, MinusCircle, Trash2, Camera
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useLivePrices } from '../../hooks/useLivePrices';
 import CoinLogo from '../../components/CoinLogo';
+import AdminComplianceActionModal from '../../components/admin/AdminComplianceActionModal';
 
 export default function AdminUserDetail() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState('system');
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Compliance Enforcement Modal state
+  const [complianceModalOpen, setComplianceModalOpen] = useState(false);
+  const [complianceActionType, setComplianceActionType] = useState<'kyc' | 'nda'>('kyc');
 
   // Live prices hook
   const { coins: liveRates, btcPrice, getPrice, refresh: refreshPrices } = useLivePrices(30000);
@@ -511,6 +516,20 @@ const resolveReconIssue = async (issueId: string) => {
             {user.email} • ID: {id} • Joined: {new Date(user.created_at).toLocaleDateString()}
           </p>
           <div className="flex flex-wrap gap-2">
+            <button 
+              onClick={() => { setComplianceActionType('kyc'); setComplianceModalOpen(true); }}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-sm transition-colors shadow-sm inline-flex items-center gap-2"
+              title="Suspend account, reset KYC status, and request live photographic re-verification"
+            >
+              <Camera size={16} /> Suspend & Request KYC
+            </button>
+            <button 
+              onClick={() => { setComplianceActionType('nda'); setComplianceModalOpen(true); }}
+              className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl text-sm transition-colors shadow-sm inline-flex items-center gap-2"
+              title="Suspend account, reset agreement status, and request Master Agreement / NDA signature"
+            >
+              <FileText size={16} /> Suspend & Request NDA
+            </button>
             <button 
               onClick={toggleFreeze}
               className={`px-4 py-2 ${user?.is_frozen ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'} text-white font-bold rounded-xl text-sm transition-colors shadow-sm inline-flex items-center gap-2`}
@@ -1051,7 +1070,28 @@ const resolveReconIssue = async (issueId: string) => {
         {/* ========================================================= */}
         {activeTab === 'documents' && (
           <div className="animate-fade-in max-w-4xl">
-            <h2 className="text-xl font-bold text-brand-dark mb-6">KYC Verifications & E-Signatures</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-brand-dark">KYC Verifications & E-Signatures</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Manage identity verification records and signed legal agreements.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setComplianceActionType('kyc'); setComplianceModalOpen(true); }}
+                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition-colors shadow-2xs flex items-center gap-1.5"
+                  title="Suspend account and request live photographic KYC verification"
+                >
+                  <Camera size={14} /> Suspend & Request KYC
+                </button>
+                <button
+                  onClick={() => { setComplianceActionType('nda'); setComplianceModalOpen(true); }}
+                  className="px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs rounded-xl transition-colors shadow-2xs flex items-center gap-1.5"
+                  title="Suspend account and request Master Agreement / NDA signature"
+                >
+                  <FileText size={14} /> Suspend & Request NDA
+                </button>
+              </div>
+            </div>
             <div className="space-y-4">
               {documents.map((d) => (
                 <div key={d.id} className="p-6 border border-gray-200 rounded-2xl bg-white shadow-sm flex flex-col gap-4">
@@ -1164,6 +1204,14 @@ const resolveReconIssue = async (issueId: string) => {
         )}
 
       </div>
+
+      <AdminComplianceActionModal
+        isOpen={complianceModalOpen}
+        onClose={() => setComplianceModalOpen(false)}
+        user={user}
+        actionType={complianceActionType}
+        onSuccess={fetchUserAndData}
+      />
     </div>
   );
 }
