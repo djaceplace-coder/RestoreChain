@@ -231,8 +231,8 @@ if (pErr || !userPortfolios || userPortfolios.length === 0) {
               </p>
               <p className="text-xs text-amber-800 mt-0.5">
                 {userProfile.kyc_status === 'rejected' || userProfile.kyc_status === 'requires_resubmission'
-                  ? 'Compliance has requested fresh photographic credentials for your ID. Please submit clear photos to unlock all features.'
-                  : 'Please complete your photographic ID verification to unlock withdrawals and unrestricted trading.'}
+                  ? 'Compliance has requested fresh live photos of your ID and selfie. Please snap live photos with your camera.'
+                  : 'Please complete your live camera ID verification and biometric selfie to unlock withdrawals and unrestricted trading.'}
               </p>
             </div>
           </div>
@@ -240,7 +240,7 @@ if (pErr || !userPortfolios || userPortfolios.length === 0) {
             onClick={() => setIsKYCModalOpen(true)}
             className="px-4 py-2 bg-brand-purple hover:bg-purple-700 text-white rounded-xl text-xs font-bold shrink-0 transition-colors shadow-sm cursor-pointer"
           >
-            {userProfile.kyc_status === 'rejected' || userProfile.kyc_status === 'requires_resubmission' ? 'Re-Upload Documents' : 'Verify Identity Now'}
+            {userProfile.kyc_status === 'rejected' || userProfile.kyc_status === 'requires_resubmission' ? 'Snap Live Photos Now' : 'Start Live Verification'}
           </button>
         </div>
       )}

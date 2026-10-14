@@ -677,7 +677,7 @@ export default function AdminKYC() {
                         <div>
                           <p className="font-bold text-sm text-amber-950">Identity Profile Captured (No Photos in Database)</p>
                           <p className="text-amber-800 mt-0.5">
-                            This user submitted their address and profile details, but photographic documents were not stored (from a submission prior to image compression). You can request fresh photos or approve them directly.
+                            This user submitted their address and profile details, but photographic documents were not stored (from a submission prior to image compression). You can request live camera photos or approve them directly.
                           </p>
                         </div>
                       </div>
@@ -685,7 +685,7 @@ export default function AdminKYC() {
                         onClick={() => handleRequestReupload(d.user_id, d.profiles?.email || '')}
                         className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shrink-0 transition-colors shadow-sm cursor-pointer"
                       >
-                        Request Photo Upload
+                        Request Live Photo Snap
                       </button>
                     </div>
                   )}

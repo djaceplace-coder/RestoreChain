@@ -1,18 +1,20 @@
 -- ==============================================================================
--- TRACEFIELD: COMPLETE PRODUCTION COMPLIANCE & NOTIFICATIONS ALIGNMENT SCRIPT
+-- TRACEFIELD: COMPLETE PRODUCTION COMPLIANCE, KYC LIVE CAMERA & NOTIFICATIONS SCRIPT
 -- ==============================================================================
 -- Run this in your Supabase SQL Editor (Dashboard -> SQL Editor -> New Query -> Run)
 --
 -- This script fixes and configures:
--- 1. Adds 'super_admin' to enum user_role without error.
--- 2. Ensures profiles table has is_admin, kyc_status, account_status, and clean constraints.
--- 3. Grants full Admin rights to adereraadenike@gmail.com and existing admin accounts.
--- 4. Ensures kyc_documents & user_documents tables exist with proper columns and foreign keys.
--- 5. Ensures notifications table exists with proper columns and non-blocking RLS.
+-- 1. Adds 'super_admin' to enum user_role safely without duplicate errors.
+-- 2. Ensures profiles table has is_admin, kyc_status, account_status, address, etc.
+-- 3. Elevates admin account (adereraadenike@gmail.com) and existing admins with full rights.
+-- 4. Ensures kyc_documents table exists with all live photo columns (document_url, document_back_url, selfie_url).
+-- 5. Ensures user_documents (NDAs) and notifications tables exist with all necessary columns.
 -- 6. Configures public.is_admin() helper function with SECURITY DEFINER to bypass recursion.
--- 7. Configures clean RLS policies allowing Admins to manage all tables, users to view/create their own.
--- 8. Adds performance indexes on user_id and status to eliminate query timeouts.
--- 9. Deploys atomic admin_update_kyc_status RPC function for one-click UI approvals.
+-- 7. High-performance indexing on user_id, status, and is_read to eliminate PostgreSQL statement timeouts.
+-- 8. Clean, non-blocking RLS policies allowing Admins full access and users to insert/read their records.
+-- 9. Provisions Supabase Storage 'kyc' bucket with public read and authenticated insert policies.
+-- 10. Deploys atomic admin_update_kyc_status RPC function for one-click approvals.
+-- 11. Quick queries to reset or approve test accounts (e.g. Michael Dane).
 -- ==============================================================================
 
 -- 1. Ensure 'super_admin' exists in user_role enum
@@ -61,6 +63,7 @@ CREATE TABLE IF NOT EXISTS public.kyc_documents (
 );
 
 -- Ensure all columns exist on kyc_documents
+ALTER TABLE public.kyc_documents ADD COLUMN IF NOT EXISTS document_url TEXT;
 ALTER TABLE public.kyc_documents ADD COLUMN IF NOT EXISTS document_back_url TEXT;
 ALTER TABLE public.kyc_documents ADD COLUMN IF NOT EXISTS selfie_url TEXT;
 ALTER TABLE public.kyc_documents ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
@@ -175,6 +178,7 @@ DROP POLICY IF EXISTS "Users can update own notifications" ON public.notificatio
 DROP POLICY IF EXISTS "Users can insert own notifications" ON public.notifications;
 DROP POLICY IF EXISTS "Notifications access" ON public.notifications;
 DROP POLICY IF EXISTS "Admins can manage all notifications" ON public.notifications;
+DROP POLICY IF EXISTS "Allow notification inserts" ON public.notifications;
 
 -- Users can read their own notifications
 CREATE POLICY "Users can view own notifications"
@@ -197,7 +201,40 @@ CREATE POLICY "Admins can manage all notifications"
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- 12. Robust admin_update_kyc_status RPC
+-- 12. Storage Bucket Setup ('kyc')
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'storage') THEN
+    -- Create bucket if not exists
+    INSERT INTO storage.buckets (id, name, public)
+    VALUES ('kyc', 'kyc', true)
+    ON CONFLICT (id) DO UPDATE SET public = true;
+
+    -- Safe policies
+    BEGIN
+      DROP POLICY IF EXISTS "Public read KYC storage" ON storage.objects;
+      CREATE POLICY "Public read KYC storage" ON storage.objects
+        FOR SELECT USING (bucket_id = 'kyc');
+    EXCEPTION WHEN others THEN NULL;
+    END;
+
+    BEGIN
+      DROP POLICY IF EXISTS "Authenticated upload KYC storage" ON storage.objects;
+      CREATE POLICY "Authenticated upload KYC storage" ON storage.objects
+        FOR INSERT WITH CHECK (bucket_id = 'kyc' AND auth.role() = 'authenticated');
+    EXCEPTION WHEN others THEN NULL;
+    END;
+
+    BEGIN
+      DROP POLICY IF EXISTS "Admin manage KYC storage" ON storage.objects;
+      CREATE POLICY "Admin manage KYC storage" ON storage.objects
+        FOR ALL USING (bucket_id = 'kyc' AND public.is_admin());
+    EXCEPTION WHEN others THEN NULL;
+    END;
+  END IF;
+END $$;
+
+-- 13. Robust admin_update_kyc_status RPC
 CREATE OR REPLACE FUNCTION public.admin_update_kyc_status(
   target_user_id UUID, 
   doc_id UUID, 
@@ -247,7 +284,7 @@ BEGIN
 END;
 $$;
 
--- 13. Grant Permissions to authenticated and anon users
+-- 14. Grant Permissions to authenticated and anon users
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_update_kyc_status(UUID, UUID, TEXT, TEXT) TO authenticated;
 GRANT ALL ON TABLE public.kyc_documents TO authenticated;
@@ -255,17 +292,17 @@ GRANT ALL ON TABLE public.user_documents TO authenticated;
 GRANT ALL ON TABLE public.notifications TO authenticated;
 
 -- ==============================================================================
--- OPTIONAL DIRECT APPROVAL / RESET SHORTCUTS (Uncomment if needed)
+-- PRODUCTION HELPERS & TEST SHORTCUTS (Run these as needed in SQL Editor)
 -- ==============================================================================
 --
--- A. Instantly approve Michael Dane (or any specific user by email):
+-- A. To reset Michael Dane so he can test the brand-new Live Camera snapping:
+-- UPDATE public.profiles SET kyc_status = 'unverified' WHERE email = 'michaeldane1812@gmail.com';
+-- UPDATE public.kyc_documents SET status = 'rejected', rejection_reason = 'Photo re-upload requested' WHERE user_id IN (SELECT id FROM public.profiles WHERE email = 'michaeldane1812@gmail.com');
+--
+-- B. To instantly approve Michael Dane:
 -- UPDATE public.profiles SET kyc_status = 'approved' WHERE email = 'michaeldane1812@gmail.com';
 -- UPDATE public.kyc_documents SET status = 'approved', updated_at = now() WHERE user_id IN (SELECT id FROM public.profiles WHERE email = 'michaeldane1812@gmail.com');
 --
--- B. Instantly approve ALL pending KYC submissions:
+-- C. To instantly approve ALL pending submissions:
 -- UPDATE public.profiles SET kyc_status = 'approved' WHERE kyc_status = 'pending';
 -- UPDATE public.kyc_documents SET status = 'approved', updated_at = now() WHERE status = 'pending';
---
--- C. Reset Michael Dane to unverified so he can submit fresh photos:
--- UPDATE public.profiles SET kyc_status = 'unverified' WHERE email = 'michaeldane1812@gmail.com';
--- UPDATE public.kyc_documents SET status = 'rejected', rejection_reason = 'Photo re-upload requested' WHERE user_id IN (SELECT id FROM public.profiles WHERE email = 'michaeldane1812@gmail.com');
