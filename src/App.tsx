@@ -59,6 +59,18 @@ function AppContent() {
   const isAppShell = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/onboarding');
   const hideNavAndFooter = isAuthPage || isAppShell;
 
+  // Guarantee that navigating to or reloading visitor/public routes strictly stops any camera hardware streams
+  React.useEffect(() => {
+    if (!isAppShell) {
+      if (typeof window !== 'undefined' && (window as any).__activeCameraStream) {
+        try {
+          (window as any).__activeCameraStream.getTracks().forEach((t: any) => t.stop());
+        } catch (e) {}
+        (window as any).__activeCameraStream = null;
+      }
+    }
+  }, [location.pathname, isAppShell]);
+
   return (
     <div className="min-h-screen selection:bg-brand-purple/20 selection:text-brand-purple flex flex-col">
       <ScrollToTop />

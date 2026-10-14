@@ -69,9 +69,13 @@ export default function DashboardLayout() {
       })
       .subscribe();
 
+    const handleOpenKYC = () => setIsKYCModalOpen(true);
+    window.addEventListener('open-kyc-modal', handleOpenKYC);
+
     return () => {
       authListener?.subscription.unsubscribe();
       supabase.removeChannel(notifChannel);
+      window.removeEventListener('open-kyc-modal', handleOpenKYC);
     };
   }, [navigate]);
 

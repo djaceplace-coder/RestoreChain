@@ -237,7 +237,7 @@ export default function AdminKYC() {
       try {
         await supabase.from('notifications').insert({
           user_id: userId,
-          type: action === 'approved' ? 'system' : 'warning',
+          type: action === 'approved' ? 'system' : 'alert',
           title: action === 'approved' ? 'Identity Verification Approved' : 'Identity Verification Rejected',
           message: action === 'approved'
             ? 'Your identity documents have been verified and approved by compliance. You now have full access to all platform features.'
@@ -265,34 +265,42 @@ export default function AdminKYC() {
   };
 
   const handleRequestReupload = async (userId: string, email: string) => {
+    setActionLoadingId(`reupload-${userId}`);
     try {
-      // 1. Dispatch in-app notification to the user
-      const { error: notifErr } = await supabase.from('notifications').insert({
-        user_id: userId,
-        type: 'warning',
-        title: 'Action Required: ID Re-upload Requested',
-        message: 'Compliance has requested fresh, clearer photographic credentials for your ID. Please open Identity Verification in your Settings or Portfolio to re-upload clear photos.'
+      // 1. Try atomic database RPC with elevated SECURITY DEFINER privileges
+      const { error: rpcErr } = await supabase.rpc('admin_request_kyc_resubmission', {
+        target_user_id: userId,
+        reason: 'Compliance has requested fresh, clearer photographic credentials for your ID. Please open Identity Verification in your Settings or Portfolio to snap live photos.'
       });
-      if (notifErr) {
-        console.warn('Notification insert note:', notifErr);
+
+      if (rpcErr) {
+        console.warn('RPC admin_request_kyc_resubmission note, running direct updates:', rpcErr);
+
+        // Fallback: Dispatch in-app notification to the user
+        await supabase.from('notifications').insert({
+          user_id: userId,
+          type: 'alert',
+          title: 'Action Required: Live ID Verification Requested',
+          message: 'Compliance has requested fresh, clearer photographic credentials for your ID. Please open Identity Verification in your Settings or Portfolio to snap live photos.'
+        });
+
+        // Set profile kyc_status to unverified so user can immediately re-upload
+        await supabase.from('profiles').update({ kyc_status: 'unverified' }).eq('id', userId);
+
+        // Mark existing pending kyc_documents as rejected so they no longer inflate pending badges
+        await supabase.from('kyc_documents')
+          .update({ 
+            status: 'rejected', 
+            rejection_reason: 'Photo re-upload requested by compliance',
+            updated_at: new Date().toISOString() 
+          })
+          .eq('user_id', userId)
+          .eq('status', 'pending');
       }
-
-      // 2. Set profile kyc_status to unverified so user can immediately re-upload
-      await supabase.from('profiles').update({ kyc_status: 'unverified' }).eq('id', userId);
-
-      // 3. Mark existing pending kyc_documents as rejected so they no longer inflate pending badges
-      await supabase.from('kyc_documents')
-        .update({ 
-          status: 'rejected', 
-          rejection_reason: 'Photo re-upload requested by compliance',
-          updated_at: new Date().toISOString() 
-        })
-        .eq('user_id', userId)
-        .eq('status', 'pending');
 
       setToast({
         type: 'success',
-        message: `Re-upload request notification dispatched to ${email}.`
+        message: `Live photo request & in-app notification dispatched to ${email || 'user'}.`
       });
       await fetchDocuments(false);
     } catch (err: any) {
@@ -300,6 +308,8 @@ export default function AdminKYC() {
         type: 'error',
         message: 'Failed to dispatch re-upload request: ' + err.message
       });
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
@@ -323,7 +333,7 @@ export default function AdminKYC() {
       try {
         await supabase.from('notifications').insert({
           user_id: userId,
-          type: action === 'approved' ? 'system' : 'warning',
+          type: action === 'approved' ? 'system' : 'alert',
           title: action === 'approved' ? 'Master Services Agreement Executed' : 'Agreement Submission Rejected',
           message: action === 'approved'
             ? 'Your Master Services Agreement & Mutual NDA has been approved and countersigned by Tracefield Forensic Compliance.'

@@ -2,13 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 
 import { User, Receipt, CreditCard, Bell, Shield, Info, ShieldAlert, CheckCircle2 } from 'lucide-react';
-import KYCModal from '../../components/KYCModal';
-
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('account');
   const [profile, setProfile] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isKYCModalOpen, setIsKYCModalOpen] = useState(false);
   
   // Password change state
   const [newPassword, setNewPassword] = useState('');
@@ -165,20 +162,15 @@ export default function Settings() {
                   </div>
                 </div>
                 {profile?.kyc_status !== 'approved' && profile?.kyc_status !== 'pending' && (
-                  <button onClick={() => setIsKYCModalOpen(true)} className="px-4 py-2 bg-brand-purple text-white font-bold rounded-xl text-sm hover:bg-purple-700 transition-colors shadow-sm cursor-pointer">
+                  <button 
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-kyc-modal'))} 
+                    className="px-4 py-2 bg-brand-purple text-white font-bold rounded-xl text-sm hover:bg-purple-700 transition-colors shadow-sm cursor-pointer"
+                  >
                     {profile?.kyc_status === 'rejected' || profile?.kyc_status === 'requires_resubmission' ? 'Snap Live Photos' : 'Start Live Verification'}
                   </button>
                 )}
               </div>
             </div>
-            
-            <KYCModal 
-              isOpen={isKYCModalOpen} 
-              onClose={() => setIsKYCModalOpen(false)} 
-              user={currentUser} 
-              onSuccess={() => setProfile({...profile, kyc_status: 'pending'})} 
-            />
-
           </div>
         )}
 

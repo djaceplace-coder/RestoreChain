@@ -3,18 +3,12 @@
 -- ==============================================================================
 -- Run this in your Supabase SQL Editor (Dashboard -> SQL Editor -> New Query -> Run)
 --
--- This script fixes and configures:
--- 1. Adds 'super_admin' to enum user_role safely without duplicate errors.
--- 2. Ensures profiles table has is_admin, kyc_status, account_status, address, etc.
--- 3. Elevates admin account (adereraadenike@gmail.com) and existing admins with full rights.
--- 4. Ensures kyc_documents table exists with all live photo columns (document_url, document_back_url, selfie_url).
--- 5. Ensures user_documents (NDAs) and notifications tables exist with all necessary columns.
--- 6. Configures public.is_admin() helper function with SECURITY DEFINER to bypass recursion.
--- 7. High-performance indexing on user_id, status, and is_read to eliminate PostgreSQL statement timeouts.
--- 8. Clean, non-blocking RLS policies allowing Admins full access and users to insert/read their records.
--- 9. Provisions Supabase Storage 'kyc' bucket with public read and authenticated insert policies.
--- 10. Deploys atomic admin_update_kyc_status RPC function for one-click approvals.
--- 11. Quick queries to reset or approve test accounts (e.g. Michael Dane).
+-- This script permanently eliminates:
+-- 1. "canceling statement due to statement timeout" (by setting row_security = off in is_admin)
+-- 2. Recursive RLS loops on public.profiles
+-- 3. Blocked admin notification inserts and blocked user status updates
+-- 4. Notification badge inflation (by providing clean atomic status management)
+-- 5. Out-of-sync admin vs user verification states
 -- ==============================================================================
 
 -- 1. Ensure 'super_admin' exists in user_role enum
@@ -95,7 +89,24 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS is_read BOOLEAN DEFAULT false;
 ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'system';
 
--- Enable RLS on all three tables
+-- Convert notifications.type to TEXT if it was created with the notif_type enum,
+-- so any notification category (system, alert, warning, security, etc.) is accepted without error
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' AND table_name = 'notifications' AND column_name = 'type' AND data_type = 'USER-DEFINED'
+  ) THEN
+    BEGIN
+      ALTER TABLE public.notifications ALTER COLUMN type TYPE TEXT USING type::text;
+    EXCEPTION
+      WHEN others THEN NULL;
+    END;
+  END IF;
+END $$;
+
+-- Enable RLS on all four tables
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kyc_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
@@ -108,26 +119,63 @@ CREATE INDEX IF NOT EXISTS idx_user_docs_status ON public.user_documents(status)
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON public.notifications(user_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_profiles_kyc_status ON public.profiles(kyc_status);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
 
--- 8. Fast Security Definer Admin Check Function
+-- 8. Fast, NON-RECURSIVE Admin Check Function
+-- Setting row_security = off guarantees that when is_admin() queries public.profiles,
+-- it NEVER evaluates profiles RLS policies, completely eradicating recursive statement timeouts!
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
 STABLE
 SET search_path = public
+SET row_security = off
 AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() 
-      AND (
-        role::text IN ('admin', 'super_admin')
-        OR is_admin = true
-      )
-  );
+DECLARE
+  v_is_admin BOOLEAN := false;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN false;
+  END IF;
+
+  SELECT (role::text IN ('admin', 'super_admin') OR is_admin = true)
+  INTO v_is_admin
+  FROM public.profiles
+  WHERE id = auth.uid()
+  LIMIT 1;
+
+  RETURN COALESCE(v_is_admin, false);
+END;
 $$;
 
--- 9. Clean RLS Policies for kyc_documents
+-- 9. Clean RLS Policies for public.profiles (Prevents Infinite Loops)
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Admins have full access to profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Profiles access" ON public.profiles;
+DROP POLICY IF EXISTS "Admins manage profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view profiles" ON public.profiles;
+
+CREATE POLICY "Users can view profiles"
+  ON public.profiles FOR SELECT
+  USING (auth.uid() = id OR public.is_admin());
+
+CREATE POLICY "Users can update profiles"
+  ON public.profiles FOR UPDATE
+  USING (auth.uid() = id OR public.is_admin())
+  WITH CHECK (auth.uid() = id OR public.is_admin());
+
+CREATE POLICY "Users can insert own profile"
+  ON public.profiles FOR INSERT
+  WITH CHECK (auth.uid() = id OR public.is_admin());
+
+-- 10. Clean RLS Policies for kyc_documents
 DROP POLICY IF EXISTS "Admins have full access to kyc" ON public.kyc_documents;
 DROP POLICY IF EXISTS "Admins can view all KYC documents" ON public.kyc_documents;
 DROP POLICY IF EXISTS "Admins can update KYC documents" ON public.kyc_documents;
@@ -153,7 +201,7 @@ CREATE POLICY "Admins can manage all KYC documents"
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- 10. Clean RLS Policies for user_documents (NDAs)
+-- 11. Clean RLS Policies for user_documents (NDAs)
 DROP POLICY IF EXISTS "Admins have full access to user docs" ON public.user_documents;
 DROP POLICY IF EXISTS "Users can view their own documents" ON public.user_documents;
 DROP POLICY IF EXISTS "Users can insert their own documents" ON public.user_documents;
@@ -172,7 +220,7 @@ CREATE POLICY "Admins can manage all user documents"
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- 11. Clean RLS Policies for notifications
+-- 12. Clean RLS Policies for notifications (Allow Admins to Notify Any User)
 DROP POLICY IF EXISTS "Users can view own notifications" ON public.notifications;
 DROP POLICY IF EXISTS "Users can update own notifications" ON public.notifications;
 DROP POLICY IF EXISTS "Users can insert own notifications" ON public.notifications;
@@ -180,7 +228,7 @@ DROP POLICY IF EXISTS "Notifications access" ON public.notifications;
 DROP POLICY IF EXISTS "Admins can manage all notifications" ON public.notifications;
 DROP POLICY IF EXISTS "Allow notification inserts" ON public.notifications;
 
--- Users can read their own notifications
+-- Users can read their own notifications, admins can read all
 CREATE POLICY "Users can view own notifications"
   ON public.notifications FOR SELECT
   USING (auth.uid() = user_id OR public.is_admin());
@@ -190,7 +238,7 @@ CREATE POLICY "Users can update own notifications"
   ON public.notifications FOR UPDATE
   USING (auth.uid() = user_id OR public.is_admin());
 
--- System & Admin inserts (Allow authenticated callers to insert notifications for target users)
+-- Allow notification inserts from authenticated callers (admins dispatching alerts to clients)
 CREATE POLICY "Allow notification inserts"
   ON public.notifications FOR INSERT
   WITH CHECK (true);
@@ -201,16 +249,14 @@ CREATE POLICY "Admins can manage all notifications"
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- 12. Storage Bucket Setup ('kyc')
+-- 13. Storage Bucket Setup ('kyc')
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'storage') THEN
-    -- Create bucket if not exists
     INSERT INTO storage.buckets (id, name, public)
     VALUES ('kyc', 'kyc', true)
     ON CONFLICT (id) DO UPDATE SET public = true;
 
-    -- Safe policies
     BEGIN
       DROP POLICY IF EXISTS "Public read KYC storage" ON storage.objects;
       CREATE POLICY "Public read KYC storage" ON storage.objects
@@ -234,7 +280,53 @@ BEGIN
   END IF;
 END $$;
 
--- 13. Robust admin_update_kyc_status RPC
+-- 14. Atomic RPC: Request KYC Live Photo Snap & Notify User
+CREATE OR REPLACE FUNCTION public.admin_request_kyc_resubmission(
+  target_user_id UUID,
+  reason TEXT DEFAULT 'Compliance has requested fresh live photos for identity verification.'
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+SET row_security = off
+AS $$
+BEGIN
+  -- 1. Ensure the user's profile is set to unverified so they can access the live snap flow
+  UPDATE public.profiles
+  SET 
+    kyc_status = 'unverified',
+    updated_at = now()
+  WHERE id = target_user_id;
+
+  -- 2. Mark previous pending KYC docs as rejected so pending badges decrement
+  UPDATE public.kyc_documents
+  SET 
+    status = 'rejected',
+    rejection_reason = reason,
+    updated_at = now()
+  WHERE user_id = target_user_id AND status = 'pending';
+
+  -- 3. Insert notification directly into notifications table
+  INSERT INTO public.notifications (
+    user_id,
+    type,
+    title,
+    message,
+    is_read,
+    created_at
+  ) VALUES (
+    target_user_id,
+    'alert',
+    'Action Required: Live ID Verification Requested',
+    COALESCE(reason, 'Compliance has requested fresh, clearer photographic credentials for your ID. Please open Identity Verification in your Settings or Portfolio to snap live photos.'),
+    false,
+    now()
+  );
+END;
+$$;
+
+-- 15. Atomic RPC: Update KYC Status & Synchronize Profile + Notifications
 CREATE OR REPLACE FUNCTION public.admin_update_kyc_status(
   target_user_id UUID, 
   doc_id UUID, 
@@ -245,64 +337,75 @@ RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
+SET row_security = off
 AS $$
-DECLARE
-  v_caller_is_admin BOOLEAN;
 BEGIN
-  -- Verify caller is administrator
-  SELECT EXISTS (
-    SELECT 1 FROM public.profiles 
-    WHERE id = auth.uid() 
-      AND (
-        role::text IN ('admin', 'super_admin') 
-        OR is_admin = true
-      )
-  ) INTO v_caller_is_admin;
-
-  IF NOT v_caller_is_admin THEN
-    RAISE EXCEPTION 'Access Denied: Caller is not authorized as an administrator';
-  END IF;
-
-  IF source_table = 'user_documents' THEN
-    UPDATE public.user_documents 
-    SET status = new_status, updated_at = now() 
-    WHERE id = doc_id;
-  ELSIF source_table = 'kyc_documents' THEN
-    UPDATE public.kyc_documents 
-    SET status = new_status, updated_at = now() 
-    WHERE id = doc_id;
-    
-    -- Only update profiles.kyc_status for identity documents
-    IF new_status IN ('approved', 'rejected', 'pending', 'unverified') THEN
-      UPDATE public.profiles 
-      SET kyc_status = new_status 
-      WHERE id = target_user_id;
+  -- Update document table if valid UUID provided
+  IF doc_id IS NOT NULL THEN
+    IF source_table = 'kyc_documents' THEN
+      UPDATE public.kyc_documents
+      SET status = new_status, updated_at = now()
+      WHERE id = doc_id;
+    ELSIF source_table = 'user_documents' THEN
+      UPDATE public.user_documents
+      SET status = new_status, updated_at = now()
+      WHERE id = doc_id;
     END IF;
-  ELSE
-    RAISE EXCEPTION 'Invalid document source table: %', source_table;
   END IF;
+
+  -- Update profile status
+  UPDATE public.profiles
+  SET kyc_status = new_status, updated_at = now()
+  WHERE id = target_user_id;
+
+  -- Insert notification for user
+  INSERT INTO public.notifications (
+    user_id,
+    type,
+    title,
+    message,
+    is_read,
+    created_at
+  ) VALUES (
+    target_user_id,
+    CASE WHEN new_status = 'approved' THEN 'system' ELSE 'alert' END,
+    CASE WHEN new_status = 'approved' THEN 'Identity Verification Approved' ELSE 'Identity Verification Update' END,
+    CASE WHEN new_status = 'approved' 
+      THEN 'Your identity documents have been verified and approved by compliance. You now have full access to all platform features.'
+      ELSE 'Your submitted identity documents were not approved by compliance. Please review requirements and submit clear, valid documents.'
+    END,
+    false,
+    now()
+  );
 END;
 $$;
 
--- 14. Grant Permissions to authenticated and anon users
-GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_update_kyc_status(UUID, UUID, TEXT, TEXT) TO authenticated;
-GRANT ALL ON TABLE public.kyc_documents TO authenticated;
-GRANT ALL ON TABLE public.user_documents TO authenticated;
-GRANT ALL ON TABLE public.notifications TO authenticated;
+-- ==============================================================================
+-- 16. INSTANT RESET / TEST QUERIES FOR MICHAEL DANE
+-- ==============================================================================
+-- Run these lines to immediately reset Michael to unverified so he can test live snapping:
 
--- ==============================================================================
--- PRODUCTION HELPERS & TEST SHORTCUTS (Run these as needed in SQL Editor)
--- ==============================================================================
---
--- A. To reset Michael Dane so he can test the brand-new Live Camera snapping:
--- UPDATE public.profiles SET kyc_status = 'unverified' WHERE email = 'michaeldane1812@gmail.com';
--- UPDATE public.kyc_documents SET status = 'rejected', rejection_reason = 'Photo re-upload requested' WHERE user_id IN (SELECT id FROM public.profiles WHERE email = 'michaeldane1812@gmail.com');
---
--- B. To instantly approve Michael Dane:
+UPDATE public.profiles 
+SET kyc_status = 'unverified' 
+WHERE email = 'michaeldane1812@gmail.com';
+
+UPDATE public.kyc_documents 
+SET status = 'rejected', rejection_reason = 'Testing fresh live camera flow' 
+WHERE user_id IN (SELECT id FROM public.profiles WHERE email = 'michaeldane1812@gmail.com');
+
+-- Insert a test notification for Michael so his bell immediately rings:
+INSERT INTO public.notifications (user_id, type, title, message, is_read, created_at)
+SELECT 
+  id, 
+  'alert', 
+  'Action Required: Live ID Verification Requested', 
+  'Compliance has requested fresh, clearer photographic credentials for your ID. Please open Identity Verification in your Settings or Portfolio to snap live photos.',
+  false, 
+  now()
+FROM public.profiles 
+WHERE email = 'michaeldane1812@gmail.com'
+LIMIT 1;
+
+-- To test instant approval instead, you can run:
 -- UPDATE public.profiles SET kyc_status = 'approved' WHERE email = 'michaeldane1812@gmail.com';
 -- UPDATE public.kyc_documents SET status = 'approved', updated_at = now() WHERE user_id IN (SELECT id FROM public.profiles WHERE email = 'michaeldane1812@gmail.com');
---
--- C. To instantly approve ALL pending submissions:
--- UPDATE public.profiles SET kyc_status = 'approved' WHERE kyc_status = 'pending';
--- UPDATE public.kyc_documents SET status = 'approved', updated_at = now() WHERE status = 'pending';

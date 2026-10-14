@@ -47,6 +47,12 @@ export default function LiveCamera({
       });
       streamRef.current = null;
     }
+    if (typeof window !== 'undefined' && (window as any).__activeCameraStream) {
+      try {
+        (window as any).__activeCameraStream.getTracks().forEach((t: any) => t.stop());
+      } catch (e) {}
+      (window as any).__activeCameraStream = null;
+    }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
@@ -84,6 +90,9 @@ export default function LiveCamera({
       }
 
       streamRef.current = stream;
+      if (typeof window !== 'undefined') {
+        (window as any).__activeCameraStream = stream;
+      }
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});

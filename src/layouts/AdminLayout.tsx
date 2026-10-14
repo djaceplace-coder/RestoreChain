@@ -41,12 +41,23 @@ export default function AdminLayout() {
       const { count: supportCount } = await supabase.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open');
       setSupportQueueCount(supportCount || 0);
 
-      // KYC & NDAs
-      const { count: kycCount } = await supabase.from('kyc_documents').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-      const { count: ndaCount } = await supabase.from('user_documents').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-      const { count: profileKycCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('kyc_status', 'pending');
-      const totalKycPending = Math.max(kycCount || 0, profileKycCount || 0);
-      setPendingKycCount(totalKycPending + (ndaCount || 0));
+      // Count unique users who require compliance approval
+      const [
+        { data: pendingKycDocs },
+        { data: pendingNdaDocs },
+        { data: pendingProfiles }
+      ] = await Promise.all([
+        supabase.from('kyc_documents').select('user_id').eq('status', 'pending'),
+        supabase.from('user_documents').select('user_id').eq('status', 'pending'),
+        supabase.from('profiles').select('id').eq('kyc_status', 'pending')
+      ]);
+
+      const uniquePendingUserIds = new Set<string>();
+      (pendingKycDocs || []).forEach(d => d.user_id && uniquePendingUserIds.add(d.user_id));
+      (pendingNdaDocs || []).forEach(d => d.user_id && uniquePendingUserIds.add(d.user_id));
+      (pendingProfiles || []).forEach(p => p.id && uniquePendingUserIds.add(p.id));
+
+      setPendingKycCount(uniquePendingUserIds.size);
     };
 
     fetchCounts();

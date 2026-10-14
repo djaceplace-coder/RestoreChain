@@ -3,7 +3,6 @@ import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, ShieldCheck, ShieldAlert, Lo
 import { supabase } from '../../lib/supabase';
 import AddAssetModal from '../../components/AddAssetModal';
 import KYCRestrictedModal from '../../components/KYCRestrictedModal';
-import KYCModal from '../../components/KYCModal';
 import ConnectWalletModal from "../../components/ConnectWalletModal";
 import CoinLogo from '../../components/CoinLogo';
 import { COINS } from '../../data/coins';
@@ -47,7 +46,6 @@ export default function Portfolio() {
 
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
   const [isKYCRestrictedOpen, setIsKYCRestrictedOpen] = useState(false);
-  const [isKYCModalOpen, setIsKYCModalOpen] = useState(false);
 
   const handleActionWithKYC = (action: () => void) => {
     if (userProfile?.kyc_status === 'approved') {
@@ -185,17 +183,7 @@ if (pErr || !userPortfolios || userPortfolios.length === 0) {
             <KYCRestrictedModal 
         isOpen={isKYCRestrictedOpen} 
         onClose={() => setIsKYCRestrictedOpen(false)} 
-        onOpenKYC={() => setIsKYCModalOpen(true)}
-      />
-      <KYCModal
-        isOpen={isKYCModalOpen}
-        onClose={() => setIsKYCModalOpen(false)}
-        user={user}
-        onSuccess={() => {
-           if (userProfile) {
-             setUserProfile({...userProfile, kyc_status: 'pending'});
-           }
-        }}
+        onOpenKYC={() => window.dispatchEvent(new CustomEvent('open-kyc-modal'))}
       />
       <AddAssetModal isOpen={isAddAssetOpen} onClose={() => setIsAddAssetOpen(false)} />
       <ConnectWalletModal isOpen={isConnectWalletOpen} onClose={() => setIsConnectWalletOpen(false)} onSuccess={() => window.location.reload()} />
@@ -237,7 +225,7 @@ if (pErr || !userPortfolios || userPortfolios.length === 0) {
             </div>
           </div>
           <button
-            onClick={() => setIsKYCModalOpen(true)}
+            onClick={() => window.dispatchEvent(new CustomEvent('open-kyc-modal'))}
             className="px-4 py-2 bg-brand-purple hover:bg-purple-700 text-white rounded-xl text-xs font-bold shrink-0 transition-colors shadow-sm cursor-pointer"
           >
             {userProfile.kyc_status === 'rejected' || userProfile.kyc_status === 'requires_resubmission' ? 'Snap Live Photos Now' : 'Start Live Verification'}
