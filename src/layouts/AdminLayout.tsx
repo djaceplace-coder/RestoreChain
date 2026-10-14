@@ -150,7 +150,7 @@ export default function AdminLayout() {
             <Users size={18} /> Users
           </Link>
           <Link to="/admin/kyc" onClick={closeMobileMenu} className={navLinkClass('/admin/kyc')}>
-            <ShieldAlert size={18} /> KYC Approvals
+            <ShieldAlert size={18} /> Compliance & KYC
             {pendingKycCount > 0 && (
               <span 
                 className="ml-auto bg-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm"

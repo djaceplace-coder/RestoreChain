@@ -46,7 +46,7 @@ interface NdaDocument {
 export default function AdminKYC() {
   const [documents, setDocuments] = useState<NdaDocument[]>([]);
   const [kycDocs, setKycDocs] = useState<KycDocument[]>([]);
-  const [activeTab, setActiveTab] = useState<'kyc' | 'nda' | 'all'>('kyc');
+  const [activeTab, setActiveTab] = useState<'kyc' | 'nda' | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedImage, setSelectedImage] = useState<{ url: string; title: string } | null>(null);
